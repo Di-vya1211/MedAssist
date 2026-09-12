@@ -72,11 +72,7 @@ problem-solving, teamwork, documentation, and delivering real-world project solu
 <h2 style="color:#333;"> Projects Completed </h2>
 <div align="left" style="margin: 20px; font-size: 16px;">
 
-<p><strong><a href="#project1">Project 1:</a></strong> &lt;!-- Add project title → --&gt;</p>
-
-<p><strong><a href="#project2">Project 2:</a></strong> &lt;!-- Add project title → --&gt;</p>
-
-<p><strong><a href="#project3">Project 3:</a></strong> &lt;!-- Add project title → --&gt;</p>
+<p><strong><a href="#project1">Project 1:</a></strong> MedAssist</p>
 
 <p><em>(You can add more projects as needed)</em></p>
 
@@ -89,22 +85,10 @@ problem-solving, teamwork, documentation, and delivering real-world project solu
   It focused on understanding requirements, creating structured code, and implementing key features.
 </p>
 <p>
-  <a href="<!-- Add link to full report -->" target="_blank"><strong>→ View Full Project Report</strong></a>
+  <a href="https://github.com/Di-vya1211/MedAssist/blob/main/SURE%20Trust%20project%20document1.pdf" target="_blank"><strong>→ View Full Project Report</strong></a>
 </p>
 
-<!-- Project 2 -->
-<h3 id="project2">Project 2: <!-- Add Project Title --></h3>
-<p>
-  This project expanded on intermediate concepts and required integrating multiple components to build a more complete solution.
-  It enhanced understanding of UI/UX design, modular coding, and testing.
-</p>
-<p>
-  <a href="<!-- Add link to full report -->" target="_blank"><strong>→ View Full Project Report</strong></a>
-</p>
 
-<!-- Project 3 -->
-<h3 id="project3">Project 3: <!-- Add Project Title --></h3>
-<p>
   The final project showcased the practical application of all concepts learned throughout the course.  
   It required planning, building, optimizing, and documenting a complete real-world project.
 </p>
