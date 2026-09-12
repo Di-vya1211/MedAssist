@@ -22,7 +22,7 @@
     <p><strong>Email ID:</strong> divyagoyalg39aiml@gmail.com </p>
     <p><strong>College Name:</strong> Mangalayatan University </p>
     <p><strong>Branch/Specialization :</strong> CSE </p>
-    <p><strong>College ID:</strong> <!--- Add your college ID---> </p>
+    <p><strong>College ID:</strong> 20241220 </p>
 </div>
 
 <hr style="border: 0; border-top: 1px solid #ccc; width: 80%;" />
@@ -30,7 +30,7 @@
 <h2 style="color:#333;"> Course Details </h2>
 <div align="left" style="margin: 20px; font-size: 16px;">
     <p><strong>Course Opted:</strong> AI & ML </p>
-    <p><strong>Instructor Name:</strong> <!--- Add your instructor name---> </p>
+    <p><strong>Instructor Name:</strong>Prof. Radhakumari challa </p>
 </div>
 <div align="left" style="margin: 20px; font-size: 16px;">
     <p><strong>Duration:</strong> 6 months </p>
