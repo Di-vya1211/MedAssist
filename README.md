@@ -63,7 +63,6 @@
 
 ## Overall Learning 
 
-> _This is a placeholder. Replace the text below with your personal learning summary._
 During my internship, I embarked on an extensive technical journey starting with the core fundamentals of Machine Learning, where I gained hands-on expertise in building and evaluating classic predictive models like Linear Regression, Logistic Regression, and Decision Trees. Moving ahead, I advanced into Deep Learning and Explainable AI, developing complex architectures including neural network-based recommendation systems and unpacking "black box" decisions for model interpretability. I also built practical AI applications such as an Image Captioning system to extract natural language descriptions from visuals, and a Bank Customer Churn Prediction model.​In the domain of Generative AI & Agentic Systems, I implemented Retrieval-Augmented Generation (RAG) frameworks for context-aware intelligence, designed Multi-Modal Agents, and developed advanced projects like a Voice-enabled Email Assistant and a Multilingual Email Assistant for seamless natural language interactions.
 
 
@@ -83,14 +82,6 @@ During my internship, I embarked on an extensive technical journey starting with
 </p>
 <p>
   <a href="https://github.com/Di-vya1211/MedAssist/blob/main/SURE%20Trust%20project%20document1.pdf" target="_blank"><strong>→ View Full Project Report</strong></a>
-</p>
-
-
-  The final project showcased the practical application of all concepts learned throughout the course.  
-  It required planning, building, optimizing, and documenting a complete real-world project.
-</p>
-<p>
-    <a href="https://github.com/Di-vya1211/MedAssist/blob/main/SURE%20Trust%20project%20document1.pdf" target="_blank"><strong>→ View Full Project Report</strong></a>
 
 </p>
 
