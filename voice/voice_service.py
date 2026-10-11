@@ -169,29 +169,61 @@ class VoiceService:
             print(f"[VoiceService] Live mic error: {e}")
             return False, "", "en"
 
-    def text_to_speech(self, text: str, lang_code: str = "en", output_path: str = "voice_output.mp3") -> Optional[str]:
+    def text_to_speech_bytes(self, text: str, lang_code: str = "en") -> Optional[bytes]:
         """
-        Converts text to speech in the requested language using gTTS.
+        Converts text to speech and returns MP3 audio bytes directly in memory.
+        Avoids all disk file lock and permission issues.
         """
         if not text:
             return None
         
-        # Clean markdown formatting for clean audio
-        clean_text = re.sub(r'[*_#`~>\[\]\(\)]', '', text)
+        # Clean markdown and formatting
+        clean_text = re.sub(r'[*_#`~>\[\]\(\)\{\}]', '', text)
         clean_text = re.sub(r'\s+', ' ', clean_text).strip()
-        
-        # Limit to 400 chars for responsive audio
         if len(clean_text) > 400:
             clean_text = clean_text[:400].rsplit(' ', 1)[0] + "..."
 
         try:
             from gtts import gTTS
-            tts = gTTS(text=clean_text, lang=lang_code if lang_code in ["hi", "en", "bn", "ta", "te", "mr", "gu", "pa"] else "en", slow=False)
-            full_path = os.path.join(BASE_DIR, output_path)
-            tts.save(full_path)
-            return full_path
+            lang = lang_code if lang_code in ["hi", "en", "bn", "ta", "te", "mr", "gu", "pa"] else "en"
+            tts = gTTS(text=clean_text, lang=lang, slow=False)
+            fp = io.BytesIO()
+            tts.write_to_fp(fp)
+            fp.seek(0)
+            return fp.read()
         except Exception as e:
-            print(f"[VoiceService] TTS generation error: {e}")
+            print(f"[VoiceService] TTS bytes generation error: {e}")
+            return None
+
+    def text_to_speech(self, text: str, lang_code: str = "en", output_path: str = "voice_output.mp3") -> Optional[str]:
+        """
+        Converts text to speech in the requested language using gTTS.
+        Saves safely to unique temporary or target file.
+        """
+        audio_bytes = self.text_to_speech_bytes(text, lang_code=lang_code)
+        if not audio_bytes:
+            return None
+
+        try:
+            # If output_path is relative, put it in BASE_DIR
+            full_path = output_path if os.path.isabs(output_path) else os.path.join(BASE_DIR, output_path)
+            
+            # Avoid Windows WinError 32 (file in use by browser audio player)
+            try:
+                with open(full_path, "wb") as f:
+                    f.write(audio_bytes)
+                return full_path
+            except (PermissionError, OSError):
+                # Fallback to unique temp file
+                import uuid
+                rand_id = uuid.uuid4().hex[:6]
+                alt_name = f"voice_{rand_id}.mp3"
+                alt_path = os.path.join(BASE_DIR, alt_name)
+                with open(alt_path, "wb") as f:
+                    f.write(audio_bytes)
+                return alt_path
+        except Exception as e:
+            print(f"[VoiceService] TTS file save error: {e}")
             return None
 
 

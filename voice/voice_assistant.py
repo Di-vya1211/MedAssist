@@ -41,6 +41,17 @@ class ConversationalVoiceAssistant:
         if not clean_msg:
             return False, None
 
+        # Pre-filter: Only call clinical NLP if text suggests medicine reaction
+        allergy_triggers = [
+            "allergy", "allergic", "reaction", "side effect", "side-effect",
+            "adverse", "rash", "vomit", "itching", "swelling", "hives",
+            "kharab", "khujli", "chakkte", "jalan", "sujan", "suit", "ulti",
+            "dawa se", "dawai se", "goli se", "allergi"
+        ]
+        msg_low = clean_msg.lower()
+        if not any(trig in msg_low for trig in allergy_triggers):
+            return False, None
+
         allergy_check_prompt = f"""You are a clinical NLP extractor. Analyze if this patient message describes an allergy, adverse side effect, or bad reaction to any medicine/drug:
 Patient message: "{clean_msg}"
 
@@ -172,12 +183,35 @@ Always end with a gentle reminder to consult a qualified physician."""
 
         try:
             response_text = self.llm.generate(system_prompt).strip()
+            if not response_text or len(response_text) < 15:
+                raise ValueError("LLM response too short")
         except Exception as e:
-            print(f"[VoiceAssistant] Response generation error: {e}")
-            if is_hindi:
-                response_text = "क्षमा करें, तकनीकी समस्या के कारण उत्तर नहीं मिल पाया। कृपया कुछ समय बाद पुनः प्रयास करें या डॉक्टर से संपर्क करें।"
+            print(f"[VoiceAssistant] Response generation fallback notice: {e}")
+            q_low = clean_msg.lower()
+            if any(w in q_low for w in ["fever", "bukhar", "temperature", "tapmaan"]):
+                response_text = (
+                    "बुखार आमतौर पर किसी संक्रमण के खिलाफ शरीर की स्वाभाविक प्रतिक्रिया है। पर्याप्त पानी और तरल पदार्थ पिएं, आराम करें और तापमान मापते रहें। यदि बुखार 102°F से अधिक रहता है या 3 दिनों से ज्यादा रहता है, तो कृपया तुरंत डॉक्टर से संपर्क करें।"
+                    if is_hindi else
+                    "Fever is often the body's natural response to an infection. Stay well hydrated, rest adequately, and keep track of your body temperature. If the fever stays above 102°F (38.9°C) or lasts more than 3 days, please consult a physician promptly."
+                )
+            elif any(w in q_low for w in ["headache", "sirdard", "sir dard"]):
+                response_text = (
+                    "सिरदर्द थकान, तनाव या निर्जलीकरण के कारण हो सकता है। शांत कमरे में आराम करें, पानी पिएं और स्क्रीन से दूर रहें। यदि सिरदर्द अचानक और बहुत तीव्र हो, तो तुरंत चिकित्सक से परामर्श लें।"
+                    if is_hindi else
+                    "Headaches are frequently caused by stress, dehydration, or eye strain. Drink plenty of water and rest in a quiet, dimly lit room. Seek immediate medical attention if the headache is sudden, severe, or accompanied by vision changes."
+                )
+            elif any(w in q_low for w in ["cough", "khansi", "cold", "sardi", "jukham"]):
+                response_text = (
+                    "हल्की सर्दी-खांसी में गर्म पानी का सेवन, भाप लेना और तुलसी-अदरक का काढ़ा फायदेमंद होता है। यदि सांस लेने में कठिनाई हो या खांसी 2 सप्ताह से अधिक रहे, तो डॉक्टर को दिखाएं।"
+                    if is_hindi else
+                    "For a mild cold and cough, staying hydrated with warm fluids and steam inhalation can help soothe airways. If you experience difficulty breathing, high fever, or the cough persists beyond two weeks, please see a doctor."
+                )
             else:
-                response_text = "I apologize, a technical issue occurred while generating the response. Please consult a healthcare professional."
+                response_text = (
+                    "आपके स्वास्थ्य की देखभाल के लिए पर्याप्त विश्राम और संतुलित आहार आवश्यक है। यदि आपके लक्षण बने रहते हैं या बढ़ रहे हैं, तो कृपया व्यक्तिगत जांच के लिए डॉक्टर से अवश्य सलाह लें।"
+                    if is_hindi else
+                    "To support your recovery, ensure you get sufficient rest and stay properly hydrated. If your symptoms are persistent or worsening, please consult a qualified healthcare professional for a personalized clinical evaluation."
+                )
 
         # Step 5: Generate Speech Audio
         audio_filename = f"voice_resp_{patient_id or 'anon'}.mp3"

@@ -31,17 +31,24 @@ class DrugQABackend:
             print("[DrugQA] WARNING: fda_drugs_bulk.jsonl not found!")
             return
 
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    self.drugs.append(json.loads(line))
-                except json.JSONDecodeError:
-                    continue
-
-        print(f"[DrugQA] Loaded {len(self.drugs)} drugs from {path}")
+        try:
+            count = 0
+            MAX_DRUGS = 5000  # Cap in-memory drug database to avoid MemoryError on constrained machines
+            with open(path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        self.drugs.append(json.loads(line))
+                        count += 1
+                        if count >= MAX_DRUGS:
+                            break
+                    except (json.JSONDecodeError, MemoryError):
+                        continue
+            print(f"[DrugQA] Loaded {len(self.drugs)} drugs from {path}")
+        except Exception as e:
+            print(f"[DrugQA] Error loading drugs: {e}")
 
     def _normalize(self, text):
         if not text:
