@@ -51,7 +51,7 @@ class PatientDatabase:
                 emergency_contact_phone TEXT,
                 doctor_name TEXT,
                 doctor_phone TEXT,
-                language_preference TEXT DEFAULT 'Hindi',
+                language_preference TEXT DEFAULT 'English',
                 village TEXT,
                 district TEXT,
                 state TEXT,
@@ -145,7 +145,7 @@ class PatientDatabase:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_patients_username ON patients(username)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_allergies_patient ON allergies(patient_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_medical_history_patient ON medical_history(patient_id)')
-        # Ensure demo patient (Rajesh Kumar) has persistent registration allergies
+        # Ensure demo patient has persistent registration allergies
         try:
             cursor.execute("SELECT patient_id FROM patients WHERE username = 'demo'")
             demo_row = cursor.fetchone()

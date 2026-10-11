@@ -270,28 +270,40 @@ st.markdown("""
     /* Tabs Styling */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
-        background-color: rgba(15, 23, 42, 0.6);
-        padding: 8px 12px;
-        border-radius: 14px;
+        background-color: rgba(15, 23, 42, 0.65);
+        padding: 6px 10px;
+        border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.08);
     }
-    .stTabs [data-baseweb="tab"] {
-        background-color: transparent;
+    .stTabs [data-baseweb="tab"], .stTabs button[role="tab"] {
+        background-color: transparent !important;
         color: #94a3b8 !important;
-        border-radius: 10px;
-        padding: 10px 18px;
+        border-radius: 12px !important;
+        padding: 8px 18px !important;
         font-weight: 600;
-        font-size: 0.95rem;
-        transition: all 0.2s ease;
+        font-size: 0.92rem;
+        transition: all 0.25s ease-in-out;
+        border: none !important;
+        outline: none !important;
     }
-    .stTabs [data-baseweb="tab"]:hover {
-        background-color: rgba(255, 255, 255, 0.05);
+    .stTabs [data-baseweb="tab"]:hover, .stTabs button[role="tab"]:hover {
+        background-color: rgba(255, 255, 255, 0.06) !important;
         color: #f1f5f9 !important;
+        border-radius: 12px !important;
     }
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    .stTabs [aria-selected="true"], .stTabs button[role="tab"][aria-selected="true"] {
+        background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
         color: #ffffff !important;
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+        border-radius: 12px !important;
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+        border: none !important;
+        outline: none !important;
+    }
+    .stTabs [data-baseweb="tab-highlight"],
+    .stTabs [data-baseweb="tab-border"] {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
     }
 
     /* High-contrast Inputs */
@@ -316,19 +328,77 @@ st.markdown("""
 
     /* Buttons */
     .stButton > button {
-        border-radius: 10px;
-        font-weight: 600;
-        transition: all 0.2s ease;
-        padding: 8px 18px;
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease !important;
+        padding: 8px 18px !important;
+        background: #1e293b !important;
+        color: #f8fafc !important;
+        border: 1px solid rgba(56, 189, 248, 0.3) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
     }
-    .stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-        color: white;
-        border: none;
+    .stButton > button:hover {
+        background: #334155 !important;
+        color: #38bdf8 !important;
+        border-color: #38bdf8 !important;
+        box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25) !important;
     }
-    .stButton > button[kind="primary"]:hover {
-        background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
-        box-shadow: 0 4px 14px rgba(56, 189, 248, 0.3);
+    .stButton > button p, 
+    .stButton > button span, 
+    .stButton > button div {
+        color: inherit !important;
+        font-weight: 600 !important;
+    }
+    .stButton > button[kind="primary"],
+    .stButton > button[data-testid="stBaseButton-primary"] {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #38bdf8 !important;
+        box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35) !important;
+    }
+    .stButton > button[kind="primary"]:hover,
+    .stButton > button[data-testid="stBaseButton-primary"]:hover {
+        background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%) !important;
+        color: #ffffff !important;
+        border-color: #7dd3fc !important;
+        box-shadow: 0 4px 18px rgba(56, 189, 248, 0.45) !important;
+    }
+    .stButton > button[kind="primary"] p,
+    .stButton > button[kind="primary"] span,
+    .stButton > button[kind="primary"] div,
+    .stButton > button[data-testid="stBaseButton-primary"] p,
+    .stButton > button[data-testid="stBaseButton-primary"] span,
+    .stButton > button[data-testid="stBaseButton-primary"] div {
+        color: #ffffff !important;
+    }
+    .stButton > button[kind="secondary"],
+    .stButton > button[data-testid="stBaseButton-secondary"] {
+        background: #1e293b !important;
+        color: #f1f5f9 !important;
+        border: 1px solid rgba(56, 189, 248, 0.3) !important;
+    }
+    .stButton > button[kind="secondary"]:hover,
+    .stButton > button[data-testid="stBaseButton-secondary"]:hover {
+        background: #334155 !important;
+        color: #38bdf8 !important;
+        border-color: #38bdf8 !important;
+        box-shadow: 0 4px 12px rgba(56, 189, 248, 0.25) !important;
+    }
+    .stButton > button[kind="secondary"] p,
+    .stButton > button[kind="secondary"] span,
+    .stButton > button[kind="secondary"] div,
+    .stButton > button[data-testid="stBaseButton-secondary"] p,
+    .stButton > button[data-testid="stBaseButton-secondary"] span,
+    .stButton > button[data-testid="stBaseButton-secondary"] div {
+        color: #f1f5f9 !important;
+    }
+    .stButton > button[kind="secondary"]:hover p,
+    .stButton > button[kind="secondary"]:hover span,
+    .stButton > button[kind="secondary"]:hover div,
+    .stButton > button[data-testid="stBaseButton-secondary"]:hover p,
+    .stButton > button[data-testid="stBaseButton-secondary"]:hover span,
+    .stButton > button[data-testid="stBaseButton-secondary"]:hover div {
+        color: #38bdf8 !important;
     }
 
     /* Expanders */
@@ -348,7 +418,7 @@ st.markdown("""
 def init_session_state():
     defaults = {
         "messages": [],
-        "language": "hi",  # Default to Hindi for rural health context
+        "language": "en",  # Default to English
         "emergency_alert": False,
         "disease_input": "",
         "drug_search": "",
@@ -368,8 +438,8 @@ init_session_state()
 # Language Options
 # ---------------------------------------------------------------------------
 LANGUAGE_OPTIONS = [
-    ("हिन्दी (Hindi)", "hi"),
     ("English", "en"),
+    ("हिन्दी (Hindi)", "hi"),
     ("বাংলা (Bengali)", "bn"),
     ("தமிழ் (Tamil)", "ta"),
     ("తెలుగు (Telugu)", "te"),
@@ -386,7 +456,7 @@ def translate_content(text: str, target_lang: str = None) -> str:
     if not text:
         return text
     if not target_lang:
-        target_lang = st.session_state.get("language", "hi")
+        target_lang = st.session_state.get("language", "en")
     if target_lang == "en" or not TRANSLATION_OK:
         return text
     try:
@@ -503,7 +573,7 @@ def main():
         # Language Selector
         lang_idx = 0
         for i, opt in enumerate(LANGUAGE_OPTIONS):
-            if opt[1] == st.session_state.get("language", "hi"):
+            if opt[1] == st.session_state.get("language", "en"):
                 lang_idx = i
                 break
         selected_lang = st.selectbox(

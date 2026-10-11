@@ -51,7 +51,7 @@ def render_patient_dashboard_tab(patient_id: int, db):
     emergency_phone = patient.get("emergency_contact_phone") or "Not provided"
     doctor_name = patient.get("doctor_name") or "Not assigned"
     doctor_phone = patient.get("doctor_phone") or "N/A"
-    lang_pref = patient.get("language_preference") or "Hindi"
+    lang_pref = patient.get("language_preference") or "English"
     reg_date = str(patient.get("created_at") or "")[:10]
 
     bmi_info = calculate_bmi(weight_kg if weight_kg > 0 else None, height_cm if height_cm > 0 else None)

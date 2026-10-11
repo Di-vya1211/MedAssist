@@ -23,6 +23,60 @@ def init_auth_session():
 def show_login_page(db: PatientDatabase):
     """Display login page"""
     st.markdown("""
+    <style>
+    /* High contrast dark buttons */
+    .stButton > button {
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease !important;
+        padding: 8px 18px !important;
+        background: #1e293b !important;
+        color: #f8fafc !important;
+        border: 1px solid rgba(56, 189, 248, 0.3) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+    }
+    .stButton > button:hover {
+        background: #334155 !important;
+        color: #38bdf8 !important;
+        border-color: #38bdf8 !important;
+        box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25) !important;
+    }
+    .stButton > button p, 
+    .stButton > button span, 
+    .stButton > button div {
+        color: inherit !important;
+        font-weight: 600 !important;
+    }
+    .stButton > button[kind="primary"],
+    .stButton > button[data-testid="stBaseButton-primary"] {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #38bdf8 !important;
+        box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35) !important;
+    }
+    .stButton > button[kind="primary"] p,
+    .stButton > button[kind="primary"] span,
+    .stButton > button[kind="primary"] div {
+        color: #ffffff !important;
+    }
+    .stButton > button[kind="secondary"],
+    .stButton > button[data-testid="stBaseButton-secondary"] {
+        background: #1e293b !important;
+        color: #f1f5f9 !important;
+        border: 1px solid rgba(56, 189, 248, 0.3) !important;
+    }
+    .stButton > button[kind="secondary"]:hover,
+    .stButton > button[data-testid="stBaseButton-secondary"]:hover {
+        background: #334155 !important;
+        color: #38bdf8 !important;
+        border-color: #38bdf8 !important;
+    }
+    .stButton > button[kind="secondary"] p,
+    .stButton > button[kind="secondary"] span,
+    .stButton > button[kind="secondary"] div {
+        color: #f1f5f9 !important;
+    }
+    </style>
     <div style='text-align: center; padding: 20px;'>
         <h1>🏥 MedAssist</h1>
         <h3>Rural Health Companion</h3>
@@ -53,8 +107,11 @@ def show_login_page(db: PatientDatabase):
                         st.session_state.patient_username = username
                         st.session_state.patient_name = patient_data.get('full_name') or username
                         st.session_state.patient_profile = patient_data
-                        if patient_data.get('language_preference') == "Hindi":
+                        pref_lang = patient_data.get('language_preference') or "English"
+                        if pref_lang == "Hindi":
                             st.session_state.language = "hi"
+                        else:
+                            st.session_state.language = "en"
                         st.success(f"✅ {message}")
                         st.rerun()
                     else:
@@ -67,7 +124,7 @@ def show_login_page(db: PatientDatabase):
         
         st.markdown("---")
         st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
-        if st.button("⚡ Quick Demo Login (Rajesh Kumar)", use_container_width=True, key="quick_demo_btn"):
+        if st.button("⚡ Quick Demo Login", use_container_width=True, key="quick_demo_btn"):
             demo_user = db.get_connection().execute("SELECT patient_id FROM patients WHERE username='demo'").fetchone()
             if demo_user:
                 pid = demo_user[0]
@@ -79,9 +136,9 @@ def show_login_page(db: PatientDatabase):
                 st.session_state.authenticated = True
                 st.session_state.patient_id = pid
                 st.session_state.patient_username = "demo"
-                st.session_state.patient_name = patient_data.get('full_name') or "Rajesh Kumar"
+                st.session_state.patient_name = patient_data.get('full_name') or "Demo Patient"
                 st.session_state.patient_profile = patient_data
-                st.session_state.language = "hi"
+                st.session_state.language = "en"
                 st.success("✅ Logged in as Demo Patient!")
                 st.rerun()
             else:
@@ -92,6 +149,48 @@ def show_login_page(db: PatientDatabase):
 def show_registration_page(db: PatientDatabase):
     """Display registration page"""
     st.markdown("""
+    <style>
+    /* High contrast dark buttons */
+    .stButton > button {
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease !important;
+        padding: 8px 18px !important;
+        background: #1e293b !important;
+        color: #f8fafc !important;
+        border: 1px solid rgba(56, 189, 248, 0.3) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+    }
+    .stButton > button:hover {
+        background: #334155 !important;
+        color: #38bdf8 !important;
+        border-color: #38bdf8 !important;
+        box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25) !important;
+    }
+    .stButton > button p, 
+    .stButton > button span, 
+    .stButton > button div {
+        color: inherit !important;
+        font-weight: 600 !important;
+    }
+    .stButton > button[kind="primary"],
+    .stButton > button[data-testid="stBaseButton-primary"] {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #38bdf8 !important;
+    }
+    .stButton > button[kind="secondary"],
+    .stButton > button[data-testid="stBaseButton-secondary"] {
+        background: #1e293b !important;
+        color: #f1f5f9 !important;
+        border: 1px solid rgba(56, 189, 248, 0.3) !important;
+    }
+    .stButton > button[kind="secondary"] p,
+    .stButton > button[kind="secondary"] span,
+    .stButton > button[kind="secondary"] div {
+        color: #f1f5f9 !important;
+    }
+    </style>
     <div style='text-align: center; padding: 20px;'>
         <h1>🏥 MedAssist</h1>
         <h3>Patient Registration</h3>
@@ -175,7 +274,7 @@ def show_registration_page(db: PatientDatabase):
         col_register, col_back = st.columns(2)
         
         with col_register:
-            if st.button("✅ Register", use_container_width=True, key="register_confirm"):
+            if st.button("✅ Register", use_container_width=True, key="register_confirm", type="primary"):
                 # Validation
                 if not all([full_name, username, email, password, confirm_password]):
                     st.error("⚠️ Please fill all required fields (*)")
