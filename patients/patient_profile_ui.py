@@ -27,10 +27,13 @@ def calculate_bmi(weight_kg: Optional[float], height_cm: Optional[float]) -> Dic
         return {"value": f"{bmi_val}", "label": "Obese", "color": "#ef4444", "bg": "rgba(239, 68, 68, 0.15)"}
 
 
+from core.theme import get_theme_palette
+
 def render_patient_dashboard_tab(patient_id: int, db):
     """
     Renders the complete dashboard & profile tab.
     """
+    theme = get_theme_palette()
     # Refresh patient data
     patient = db.get_patient(patient_id)
     if not patient:
@@ -61,19 +64,19 @@ def render_patient_dashboard_tab(patient_id: int, db):
     # 1. WELCOME & PATIENT IDENTITY BANNER
     # ═════════════════════════════════════════════════════════════════
     st.markdown(f"""
-    <div style='background: linear-gradient(135deg, rgba(30, 58, 138, 0.35) 0%, rgba(15, 23, 42, 0.8) 100%);
-                border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 16px; padding: 22px 26px; margin-bottom: 24px;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);'>
+    <div style='background: {theme["bg_card"]};
+                border: 1px solid {theme["border_card"]}; border-radius: 16px; padding: 22px 26px; margin-bottom: 24px;
+                box-shadow: {theme["shadow_card"]};'>
         <div style='display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;'>
             <div>
-                <span style='background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);
+                <span style='background: {theme["status_pill_bg"]}; color: {theme["primary_accent"]}; border: 1px solid {theme["border_color"]};
                              padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;'>
                     PATIENT ID #{patient_id}
                 </span>
-                <h2 style='color: #ffffff; margin: 8px 0 4px 0; font-size: 1.8rem; font-weight: 700;'>
+                <h2 style='color: {theme["text_primary"]} !important; margin: 8px 0 4px 0; font-size: 1.8rem; font-weight: 700;'>
                     👤 {full_name}
                 </h2>
-                <p style='color: #94a3b8; margin: 0; font-size: 0.95rem;'>
+                <p style='color: {theme["text_secondary"]}; margin: 0; font-size: 0.95rem;'>
                     @{username} • {email} • 📞 {phone} • Registered: {reg_date}
                 </p>
             </div>
@@ -82,8 +85,8 @@ def render_patient_dashboard_tab(patient_id: int, db):
                              padding: 6px 14px; border-radius: 12px; font-size: 0.9rem; font-weight: 600;'>
                     BMI: {bmi_info["value"]} ({bmi_info["label"]})
                 </span>
-                <p style='color: #cbd5e1; font-size: 0.85rem; margin: 8px 0 0 0;'>
-                    Preferred Language: <b style='color:#38bdf8;'>{lang_pref}</b>
+                <p style='color: {theme["text_secondary"]}; font-size: 0.85rem; margin: 8px 0 0 0;'>
+                    Preferred Language: <b style='color:{theme["primary_accent"]};'>{lang_pref}</b>
                 </p>
             </div>
         </div>
@@ -93,38 +96,38 @@ def render_patient_dashboard_tab(patient_id: int, db):
     # ═════════════════════════════════════════════════════════════════
     # 2. VITAL REGISTRATION RECORDS GRID
     # ═════════════════════════════════════════════════════════════════
-    st.markdown("<h3 style='color: #f8fafc; font-size: 1.25rem; margin-bottom: 14px;'>📊 Patient Registration & Vital Records</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='color: {theme['text_primary']} !important; font-size: 1.25rem; margin-bottom: 14px;'>📊 Patient Registration & Vital Records</h3>", unsafe_allow_html=True)
 
     v1, v2, v3, v4, v5 = st.columns(5)
 
     with v1:
         st.markdown(f"""
-        <div style='background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 12px; padding: 16px; text-align: center;'>
-            <p style='color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 600;'>⚖️ Weight</p>
-            <p style='color: #38bdf8; font-size: 1.6rem; font-weight: 700; margin: 0;'>{weight_kg} <span style='font-size: 0.9rem; font-weight: 400;'>kg</span></p>
+        <div class="stat-box">
+            <p style='color: {theme["text_secondary"]}; font-size: 0.8rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 600;'>⚖️ Weight</p>
+            <p style='color: {theme["primary_accent"]}; font-size: 1.6rem; font-weight: 700; margin: 0;'>{weight_kg} <span style='font-size: 0.9rem; font-weight: 400;'>kg</span></p>
         </div>
         """, unsafe_allow_html=True)
 
     with v2:
         st.markdown(f"""
-        <div style='background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 12px; padding: 16px; text-align: center;'>
-            <p style='color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 600;'>📏 Height</p>
-            <p style='color: #38bdf8; font-size: 1.6rem; font-weight: 700; margin: 0;'>{height_cm} <span style='font-size: 0.9rem; font-weight: 400;'>cm</span></p>
+        <div class="stat-box">
+            <p style='color: {theme["text_secondary"]}; font-size: 0.8rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 600;'>📏 Height</p>
+            <p style='color: {theme["primary_accent"]}; font-size: 1.6rem; font-weight: 700; margin: 0;'>{height_cm} <span style='font-size: 0.9rem; font-weight: 400;'>cm</span></p>
         </div>
         """, unsafe_allow_html=True)
 
     with v3:
         st.markdown(f"""
-        <div style='background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 12px; padding: 16px; text-align: center;'>
-            <p style='color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 600;'>🩸 Blood Group</p>
+        <div class="stat-box" style="border-color: rgba(239, 68, 68, 0.35);">
+            <p style='color: {theme["text_secondary"]}; font-size: 0.8rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 600;'>🩸 Blood Group</p>
             <p style='color: #ef4444; font-size: 1.6rem; font-weight: 700; margin: 0;'>{blood_type}</p>
         </div>
         """, unsafe_allow_html=True)
 
     with v4:
         st.markdown(f"""
-        <div style='background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 16px; text-align: center;'>
-            <p style='color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 600;'>🎂 Age & Sex</p>
+        <div class="stat-box" style="border-color: rgba(16, 185, 129, 0.35);">
+            <p style='color: {theme["text_secondary"]}; font-size: 0.8rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 600;'>🎂 Age & Sex</p>
             <p style='color: #10b981; font-size: 1.4rem; font-weight: 700; margin: 0;'>{age} <span style='font-size: 0.9rem; font-weight: 400;'>yrs • {gender}</span></p>
         </div>
         """, unsafe_allow_html=True)
@@ -132,8 +135,8 @@ def render_patient_dashboard_tab(patient_id: int, db):
     with v5:
         allergy_color = "#ef4444" if allergies else "#10b981"
         st.markdown(f"""
-        <div style='background: rgba(15, 23, 42, 0.7); border: 1px solid {allergy_color}33; border-radius: 12px; padding: 16px; text-align: center;'>
-            <p style='color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 600;'>🛡️ Known Allergies</p>
+        <div class="stat-box" style="border-color: {allergy_color}55;">
+            <p style='color: {theme["text_secondary"]}; font-size: 0.8rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 600;'>🛡️ Known Allergies</p>
             <p style='color: {allergy_color}; font-size: 1.6rem; font-weight: 700; margin: 0;'>{len(allergies)} <span style='font-size: 0.9rem; font-weight: 400;'>drugs</span></p>
         </div>
         """, unsafe_allow_html=True)
@@ -143,20 +146,20 @@ def render_patient_dashboard_tab(patient_id: int, db):
     c1, c2 = st.columns(2)
     with c1:
         st.markdown(f"""
-        <div style='background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px 18px;'>
+        <div style='background: {theme["bg_card"]}; border: 1px solid {theme["border_card"]}; border-radius: 12px; padding: 14px 18px;'>
             <h5 style='color: #f59e0b; margin: 0 0 6px 0;'>🚨 Emergency Contact</h5>
-            <p style='color: #cbd5e1; margin: 0; font-size: 0.9rem;'>
-                <b>{emergency_name}</b> • Phone: <span style='color:#38bdf8;'>{emergency_phone}</span>
+            <p style='color: {theme["text_secondary"]}; margin: 0; font-size: 0.9rem;'>
+                <b style="color:{theme['text_primary']};">{emergency_name}</b> • Phone: <span style='color:{theme["primary_accent"]};'>{emergency_phone}</span>
             </p>
         </div>
         """, unsafe_allow_html=True)
 
     with c2:
         st.markdown(f"""
-        <div style='background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px 18px;'>
-            <h5 style='color: #38bdf8; margin: 0 0 6px 0;'>👨‍⚕️ Assigned Doctor</h5>
-            <p style='color: #cbd5e1; margin: 0; font-size: 0.9rem;'>
-                <b>{doctor_name}</b> • Phone: <span style='color:#38bdf8;'>{doctor_phone}</span>
+        <div style='background: {theme["bg_card"]}; border: 1px solid {theme["border_card"]}; border-radius: 12px; padding: 14px 18px;'>
+            <h5 style='color: {theme["primary_accent"]}; margin: 0 0 6px 0;'>👨‍⚕️ Assigned Doctor</h5>
+            <p style='color: {theme["text_secondary"]}; margin: 0; font-size: 0.9rem;'>
+                <b style="color:{theme['text_primary']};">{doctor_name}</b> • Phone: <span style='color:{theme["primary_accent"]};'>{doctor_phone}</span>
             </p>
         </div>
         """, unsafe_allow_html=True)

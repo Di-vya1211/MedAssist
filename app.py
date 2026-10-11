@@ -62,6 +62,10 @@ from voice.voice_service import voice_service
 from voice.voice_ui import render_voice_input_widget, render_read_aloud_widget
 from voice.voice_assistant import conversational_assistant
 from voice.floating_bot import render_floating_bot
+from core.theme import (
+    apply_theme_css, render_theme_switcher, render_initiative_header,
+    render_hero_section, render_interactive_overview_cards, get_theme_palette
+)
 
 # ---------------------------------------------------------------------------
 # Module imports with graceful degradation
@@ -350,333 +354,9 @@ if "selected_test" in query_params:
 
 
 # ---------------------------------------------------------------------------
-# High-Clarity Modern Healthcare CSS Theme
+# High-Clarity Dynamic Healthcare Theme Engine (Dark, Medium, Light)
 # ---------------------------------------------------------------------------
-st.markdown("""
-<style>
-    /* Main Layout & Dark Canvas */
-    .stApp {
-        background-color: #0b0f19;
-        color: #f1f5f9;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-    
-    /* Sleek Typography */
-    h1, h2, h3, h4, h5 {
-        color: #f8fafc !important;
-        font-weight: 700;
-        letter-spacing: -0.02em;
-    }
-    p, li, span, label {
-        color: #cbd5e1 !important;
-    }
-
-    /* Modern Card Styles */
-    .info-card {
-        background: rgba(22, 31, 51, 0.75);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        padding: 20px;
-        border-radius: 14px;
-        border-left: 4px solid #38bdf8;
-        margin-bottom: 16px;
-        backdrop-filter: blur(8px);
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-    }
-    .warning-card {
-        background: rgba(30, 25, 20, 0.8);
-        border: 1px solid rgba(245, 158, 11, 0.3);
-        padding: 16px;
-        border-radius: 12px;
-        border-left: 4px solid #f59e0b;
-        margin-bottom: 14px;
-    }
-    .critical-card {
-        background: rgba(40, 20, 25, 0.85);
-        border: 1px solid rgba(239, 68, 68, 0.4);
-        padding: 18px;
-        border-radius: 14px;
-        border-left: 5px solid #ef4444;
-        margin-bottom: 16px;
-    }
-    .success-card {
-        background: rgba(16, 35, 25, 0.75);
-        border: 1px solid rgba(16, 185, 129, 0.3);
-        padding: 16px;
-        border-radius: 12px;
-        border-left: 4px solid #10b981;
-        margin-bottom: 14px;
-    }
-
-    /* Tabs Styling */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background-color: rgba(15, 23, 42, 0.65);
-        padding: 6px 10px;
-        border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    .stTabs [data-baseweb="tab"], .stTabs button[role="tab"] {
-        background-color: transparent !important;
-        color: #94a3b8 !important;
-        border-radius: 12px !important;
-        padding: 8px 18px !important;
-        font-weight: 600;
-        font-size: 0.92rem;
-        transition: all 0.25s ease-in-out;
-        border: none !important;
-        outline: none !important;
-    }
-    .stTabs [data-baseweb="tab"]:hover, .stTabs button[role="tab"]:hover {
-        background-color: rgba(255, 255, 255, 0.06) !important;
-        color: #f1f5f9 !important;
-        border-radius: 12px !important;
-    }
-    .stTabs [aria-selected="true"], .stTabs button[role="tab"][aria-selected="true"] {
-        background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
-        color: #ffffff !important;
-        border-radius: 12px !important;
-        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
-        border: none !important;
-        outline: none !important;
-    }
-    .stTabs [data-baseweb="tab-highlight"],
-    .stTabs [data-baseweb="tab-border"] {
-        display: none !important;
-        visibility: hidden !important;
-        height: 0 !important;
-    }
-
-    /* High-contrast Inputs */
-    .stTextInput > div > div > input, .stTextArea > div > div > textarea {
-        background-color: #131b2e !important;
-        color: #f8fafc !important;
-        border: 1px solid rgba(56, 189, 248, 0.25) !important;
-        border-radius: 10px !important;
-        padding: 12px 14px !important;
-        font-size: 1rem !important;
-    }
-    .stTextInput > div > div > input:focus, .stTextArea > div > div > textarea:focus {
-        border-color: #38bdf8 !important;
-        box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25) !important;
-    }
-    .stSelectbox > div > div {
-        background-color: #131b2e !important;
-        color: #f8fafc !important;
-        border-radius: 10px !important;
-        border: 1px solid rgba(56, 189, 248, 0.25) !important;
-    }
-
-    /* Buttons */
-    .stButton > button {
-        border-radius: 10px !important;
-        font-weight: 600 !important;
-        transition: all 0.2s ease !important;
-        padding: 8px 18px !important;
-        background: #1e293b !important;
-        color: #f8fafc !important;
-        border: 1px solid rgba(56, 189, 248, 0.3) !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
-    }
-    .stButton > button:hover {
-        background: #334155 !important;
-        color: #38bdf8 !important;
-        border-color: #38bdf8 !important;
-        box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25) !important;
-    }
-    .stButton > button p, 
-    .stButton > button span, 
-    .stButton > button div {
-        color: inherit !important;
-        font-weight: 600 !important;
-    }
-    .stButton > button[kind="primary"],
-    .stButton > button[data-testid="stBaseButton-primary"] {
-        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
-        color: #ffffff !important;
-        border: 1px solid #38bdf8 !important;
-        box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35) !important;
-    }
-    .stButton > button[kind="primary"]:hover,
-    .stButton > button[data-testid="stBaseButton-primary"]:hover {
-        background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%) !important;
-        color: #ffffff !important;
-        border-color: #7dd3fc !important;
-        box-shadow: 0 4px 18px rgba(56, 189, 248, 0.45) !important;
-    }
-    .stButton > button[kind="primary"] p,
-    .stButton > button[kind="primary"] span,
-    .stButton > button[kind="primary"] div,
-    .stButton > button[data-testid="stBaseButton-primary"] p,
-    .stButton > button[data-testid="stBaseButton-primary"] span,
-    .stButton > button[data-testid="stBaseButton-primary"] div {
-        color: #ffffff !important;
-    }
-    .stButton > button[kind="secondary"],
-    .stButton > button[data-testid="stBaseButton-secondary"] {
-        background: #1e293b !important;
-        color: #f1f5f9 !important;
-        border: 1px solid rgba(56, 189, 248, 0.3) !important;
-    }
-    .stButton > button[kind="secondary"]:hover,
-    .stButton > button[data-testid="stBaseButton-secondary"]:hover {
-        background: #334155 !important;
-        color: #38bdf8 !important;
-        border-color: #38bdf8 !important;
-        box-shadow: 0 4px 12px rgba(56, 189, 248, 0.25) !important;
-    }
-    .stButton > button[kind="secondary"] p,
-    .stButton > button[kind="secondary"] span,
-    .stButton > button[kind="secondary"] div,
-    .stButton > button[data-testid="stBaseButton-secondary"] p,
-    .stButton > button[data-testid="stBaseButton-secondary"] span,
-    .stButton > button[data-testid="stBaseButton-secondary"] div {
-        color: #f1f5f9 !important;
-    }
-    .stButton > button[kind="secondary"]:hover p,
-    .stButton > button[kind="secondary"]:hover span,
-    .stButton > button[kind="secondary"]:hover div,
-    .stButton > button[data-testid="stBaseButton-secondary"]:hover p,
-    .stButton > button[data-testid="stBaseButton-secondary"]:hover span,
-    .stButton > button[data-testid="stBaseButton-secondary"]:hover div {
-        color: #38bdf8 !important;
-    }
-
-    /* Expanders */
-    .streamlit-expanderHeader {
-        background-color: rgba(22, 31, 51, 0.6) !important;
-        border-radius: 10px !important;
-        color: #f8fafc !important;
-        font-weight: 600 !important;
-    }
-
-    /* ========================================================
-       FLOATING AI BOT DIALOG AS SIDE SQUARE CARD (BOTTOM-RIGHT)
-       ======================================================== */
-    /* 1. Backdrop / Outer Flex Container: Fullscreen, transparent, aligns content to bottom-right */
-    div[data-baseweb="modal"],
-    div[data-baseweb="modal"] > div,
-    div[data-testid="stDialog"],
-    div.stDialog,
-    .e1mymz5c0 {
-        position: fixed !important;
-        inset: 0 !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        background: transparent !important;
-        background-color: transparent !important;
-        display: flex !important;
-        align-items: flex-end !important;
-        justify-content: flex-end !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        z-index: 99999999 !important;
-    }
-
-    /* 2. Inner Dialog Card: Fixed at bottom-right corner directly above the 3D bot */
-    div[data-testid="stDialog"] > div,
-    div.stDialog > div,
-    div[role="dialog"],
-    .e1mymz5c1 {
-        position: fixed !important;
-        bottom: 105px !important;
-        right: 25px !important;
-        inset: auto !important;
-        top: auto !important;
-        left: auto !important;
-        margin: 0 !important;
-        width: 410px !important;
-        max-width: calc(100vw - 35px) !important;
-        height: 550px !important;
-        max-height: calc(100vh - 125px) !important;
-        background: #0b1120 !important;
-        background-color: #0b1120 !important;
-        border: 2px solid #38bdf8 !important;
-        border-radius: 20px !important;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95), 0 0 30px rgba(56, 189, 248, 0.4) !important;
-        overflow-y: auto !important;
-        padding: 1.15rem 1.3rem !important;
-        display: flex !important;
-        flex-direction: column !important;
-        pointer-events: auto !important;
-        transform-origin: bottom right !important;
-        animation: botPopupFromBot 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-    }
-
-    /* Pop out directly from the bottom-right 3D bot */
-    @keyframes botPopupFromBot {
-        0% {
-            opacity: 0;
-            transform: scale(0.12) translateY(80px) translateX(40px);
-        }
-        70% {
-            opacity: 1;
-            transform: scale(1.03) translateY(-4px) translateX(-2px);
-        }
-        100% {
-            opacity: 1;
-            transform: scale(1) translateY(0) translateX(0);
-        }
-    }
-
-    /* 3. Hide floating speech bubble when dialog is open so they do not overlap */
-    body:has(div[data-testid="stDialog"]) .bot-speech-bubble,
-    body:has(div.stDialog) .bot-speech-bubble,
-    body:has(div[role="dialog"]) .bot-speech-bubble {
-        display: none !important;
-    }
-
-    /* 4. Compact dialog header & stylish close button */
-    div[data-testid="stDialog"] h2,
-    div.stDialog h2,
-    div[role="dialog"] h2 {
-        font-size: 1.05rem !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        color: #f8fafc !important;
-        font-weight: 700 !important;
-    }
-
-    div[data-testid="stDialog"] button[aria-label="Close"],
-    div.stDialog button[aria-label="Close"],
-    div[role="dialog"] button[aria-label="Close"],
-    .e1mymz5c3 {
-        color: #94a3b8 !important;
-        top: 14px !important;
-        right: 14px !important;
-        font-size: 1.2rem !important;
-        border-radius: 8px !important;
-        transition: all 0.2s ease !important;
-    }
-
-    div[data-testid="stDialog"] button[aria-label="Close"]:hover,
-    div.stDialog button[aria-label="Close"]:hover,
-    div[role="dialog"] button[aria-label="Close"]:hover,
-    .e1mymz5c3:hover {
-        color: #f43f5e !important;
-        background: rgba(244, 63, 94, 0.15) !important;
-        transform: scale(1.1) !important;
-    }
-
-    /* 5. Custom scrollbar for the dialog card */
-    div[data-testid="stDialog"] > div::-webkit-scrollbar,
-    div.stDialog > div::-webkit-scrollbar,
-    div[role="dialog"]::-webkit-scrollbar,
-    .e1mymz5c1::-webkit-scrollbar {
-        width: 6px !important;
-    }
-    div[data-testid="stDialog"] > div::-webkit-scrollbar-thumb,
-    div.stDialog > div::-webkit-scrollbar-thumb,
-    div[role="dialog"]::-webkit-scrollbar-thumb,
-    .e1mymz5c1::-webkit-scrollbar-thumb {
-        background: rgba(56, 189, 248, 0.3) !important;
-        border-radius: 10px !important;
-    }
-</style>
-""", unsafe_allow_html=True)
+apply_theme_css()
 
 
 # ---------------------------------------------------------------------------
@@ -826,23 +506,16 @@ def main():
     critical_allergies = [a for a in patient_allergies if a.get("severity") == "Severe"]
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # TOP HEADER & CONTROLS
+    # TOP INITIATIVE HEADER & STATUS GRID (RakshaPath inspired)
     # ═══════════════════════════════════════════════════════════════════════════
-    top_col1, top_col2, top_col_bot, top_col3, top_col4 = st.columns([3.5, 2, 1.8, 1.5, 1.2])
+    apply_theme_css()
+    theme = get_theme_palette()
+    render_initiative_header()
 
-    with top_col1:
-        st.markdown(f"""
-        <div style='display: flex; align-items: center; gap: 12px;'>
-            <span style='font-size: 2.2rem;'>🏥</span>
-            <div>
-                <h2 style='margin: 0; color: #38bdf8 !important; font-size: 1.6rem;'>MedAssist</h2>
-                <p style='margin: 0; color: #94a3b8; font-size: 0.85rem;'>Rural Health Companion & Allergy Protection System</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+    # Top Navigation Controls (Language, Theme Mode, AI Bot, Emergency, Logout)
+    top_col_lang, top_col_theme, top_col_bot, top_col_emg, top_col_logout = st.columns([2.4, 3.4, 1.8, 1.4, 1.0])
 
-    with top_col2:
-        # Language Selector
+    with top_col_lang:
         lang_idx = 0
         for i, opt in enumerate(LANGUAGE_OPTIONS):
             if opt[1] == st.session_state.get("language", "en"):
@@ -851,7 +524,7 @@ def main():
         selected_lang = st.selectbox(
             "🌐 Active Language",
             options=LANGUAGE_OPTIONS,
-            format_func=lambda x: x[0],
+            format_func=lambda x: f"🌐 {x[0]}",
             index=lang_idx,
             label_visibility="collapsed"
         )
@@ -861,16 +534,19 @@ def main():
                 del st.session_state.floating_bot_history
             st.rerun()
 
+    with top_col_theme:
+        render_theme_switcher()
+
     with top_col_bot:
         if st.button("🤖 AI Companion", use_container_width=True, type="primary"):
             st.session_state.floating_bot_dialog_open = True
             st.rerun()
 
-    with top_col3:
-        if st.button("🚨 EMERGENCY", use_container_width=True, type="secondary"):
+    with top_col_emg:
+        if st.button("🚨 Emergency", use_container_width=True, type="secondary"):
             st.error("🚨 EMERGENCY: Call 108 (Ambulance) or 102 immediately!")
 
-    with top_col4:
+    with top_col_logout:
         if st.button("🚪 Logout", use_container_width=True):
             st.session_state.authenticated = False
             st.session_state.patient_id = None
@@ -881,20 +557,26 @@ def main():
     if critical_allergies:
         crit_names = ", ".join([a.get('medicine_name') for a in critical_allergies])
         st.markdown(f"""
-        <div class="critical-card" style="margin-top: 14px;">
+        <div class="critical-card" style="margin-top: 10px;">
             <div style="display:flex; align-items:center; gap: 10px;">
                 <span style="font-size:1.5rem;">🚨</span>
                 <div>
                     <h4 style="color:#ef4444 !important; margin:0; font-size:1rem;">ACTIVE ALLERGY SAFEGUARD: {crit_names}</h4>
                     <p style="color:#cbd5e1; margin:2px 0 0 0; font-size:0.85rem;">
-                        MedAssist is actively guarding your recommendations to prevent accidental exposure to these medications.
+                        MedAssist is actively guarding your clinical recommendations to prevent accidental exposure to these medications.
                     </p>
                 </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-    st.markdown("<hr style='border-color: rgba(255,255,255,0.08); margin: 12px 0 18px 0;'>", unsafe_allow_html=True)
+    # Hero Section & Platform Highlights
+    render_hero_section()
+
+    # Interactive Dual Role Cards (from RakshaPath reference design)
+    render_interactive_overview_cards()
+
+    st.markdown("<hr style='border-color: rgba(255,255,255,0.08); margin: 20px 0 20px 0;'>", unsafe_allow_html=True)
 
     # ═══════════════════════════════════════════════════════════════════════════
     # MAIN APP TABS

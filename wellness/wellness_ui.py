@@ -54,15 +54,16 @@ def render_wellness_hub_tab(patient_id: Optional[int] = None, patient_db = None)
         margin-bottom: 8px;
     }
     .wellness-card {
-        background: rgba(15, 23, 42, 0.75);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: var(--bg-card, rgba(15, 23, 42, 0.75));
+        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
         border-radius: 14px;
         padding: 18px 20px;
         margin-bottom: 16px;
         backdrop-filter: blur(8px);
+        box-shadow: var(--shadow-card, 0 4px 14px rgba(0, 0, 0, 0.15));
     }
     .wellness-card:hover {
-        border-color: rgba(56, 189, 248, 0.3);
+        border-color: var(--primary-accent, #38bdf8);
     }
     .remedy-box-ayush {
         background: rgba(16, 185, 129, 0.08);
