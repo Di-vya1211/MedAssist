@@ -10,10 +10,15 @@ Renders modern, open voice input in all modules:
 """
 
 from typing import Optional, Dict, Any
+import os
 import re
 import urllib.parse
 import streamlit as st
+import streamlit.components.v1 as components
 from voice.voice_service import voice_service
+
+_LIVE_MIC_DIR = os.path.join(os.path.dirname(__file__), "live_mic_component")
+_live_mic_component = components.declare_component("medassist_live_mic", path=_LIVE_MIC_DIR)
 
 
 def render_voice_input_widget(
@@ -88,218 +93,31 @@ def render_voice_input_widget(
 
     user_active_lang = st.session_state.get("language", "en")
     target_speech_lang = "hi-IN" if user_active_lang == "hi" else "en-US"
-    lang_display_name = "हिन्दी (Hindi)" if user_active_lang == "hi" else "English"
+    btn_label = "🎙️ Live Microphone / लाइव बोलें" if user_active_lang == "hi" else "🎙️ Live Microphone (Click and Speak)"
+    help_label = "Speak disease or medicine name" if user_active_lang == "en" else "बीमारी या दवा का नाम बोलें"
 
-    # Embed Browser Native Web Speech API Live Microphone
-    import streamlit.components.v1 as components
-    web_mic_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <meta charset="utf-8">
-    <style>
-      * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
-      body {{ background: transparent; overflow: hidden; }}
-      .live-mic-wrap {{
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        background: rgba(15, 23, 42, 0.7);
-        border: 1px solid rgba(56, 189, 248, 0.35);
-        border-radius: 12px;
-        padding: 7px 14px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-      }}
-      .mic-btn {{
-        background: linear-gradient(135deg, #0284c7, #0369a1);
-        color: #ffffff;
-        border: none;
-        border-radius: 30px;
-        padding: 8px 18px;
-        font-size: 0.92rem;
-        font-weight: 700;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        box-shadow: 0 0 14px rgba(2, 132, 199, 0.4);
-        transition: all 0.2s ease;
-        white-space: nowrap;
-      }}
-      .mic-btn:hover {{
-        background: linear-gradient(135deg, #0369a1, #075985);
-        transform: translateY(-1px);
-        box-shadow: 0 0 20px rgba(2, 132, 199, 0.6);
-      }}
-      .mic-btn.active {{
-        background: linear-gradient(135deg, #ef4444, #dc2626) !important;
-        animation: pulse 1.4s infinite;
-      }}
-      @keyframes pulse {{
-        0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }}
-        70% {{ box-shadow: 0 0 0 14px rgba(239, 68, 68, 0); }}
-        100% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }}
-      }}
-      .live-status {{
-        color: #94a3b8;
-        font-size: 0.85rem;
-        flex: 1;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }}
-    </style>
-    </head>
-    <body>
-    <div class="live-mic-wrap">
-      <button id="liveMicBtn" class="mic-btn" onclick="toggleListening()">
-        <span id="micIcon" style="font-size:1.15rem;">🎙️</span>
-        <span id="btnText">Live Microphone (Click & Speak)</span>
-      </button>
-      <div id="liveStatus" class="live-status">
-        Mode: <b>{lang_display_name}</b> • Click mic & speak directly
-      </div>
-    </div>
+    col_mic, col_pc = st.columns([4, 1.2])
 
-    <script>
-    let recognition = null;
-    let isListening = false;
-    const targetLang = "{target_speech_lang}";
-    const targetModule = "{module_key}";
+    with col_mic:
+        live_res = _live_mic_component(
+            language=target_speech_lang,
+            btn_label=btn_label,
+            help_text=help_label,
+            key=f"live_mic_comp_{module_key}",
+            default=None
+        )
 
-    function toggleListening() {{
-      const SpeechRec = window.parent.SpeechRecognition || window.parent.webkitSpeechRecognition || window.SpeechRecognition || window.webkitSpeechRecognition;
-      const btn = document.getElementById('liveMicBtn');
-      const btnText = document.getElementById('btnText');
-      const status = document.getElementById('liveStatus');
-
-      if (!SpeechRec) {{
-        status.innerHTML = "<span style='color:#f59e0b;'>⚠️ Browser Speech API unavailable. Please use the PC Hardware Mic below.</span>";
-        return;
-      }}
-
-      if (isListening && recognition) {{
-        recognition.stop();
-        return;
-      }}
-
-      try {{
-        recognition = new SpeechRec();
-        recognition.lang = targetLang;
-        recognition.continuous = false;
-        recognition.interimResults = true;
-
-        recognition.onstart = function() {{
-          isListening = true;
-          btn.classList.add('active');
-          btnText.innerText = "🔴 Listening... Speak now!";
-          status.innerHTML = "<span style='color:#38bdf8; font-weight:600;'>Listening live in {lang_display_name}... Speak now!</span>";
-        }};
-
-        recognition.onresult = function(event) {{
-          let interim = '';
-          let final = '';
-          for (let i = event.resultIndex; i < event.results.length; ++i) {{
-            if (event.results[i].isFinal) {{
-              final += event.results[i][0].transcript;
-            }} else {{
-              interim += event.results[i][0].transcript;
-            }}
-          }}
-          const current = final || interim;
-          status.innerHTML = "<span style='color:#10b981; font-weight:700;'>🗣️ " + current + "</span>";
-
-          try {{
-            const pDoc = window.parent.document;
-            const inputs = pDoc.querySelectorAll('input[type="text"]');
-            for (const inp of inputs) {{
-              if (inp.placeholder && (inp.placeholder.includes('Diabetes') || inp.placeholder.includes('disease') || inp.placeholder.includes('medicine') || inp.placeholder.includes('e.g.'))) {{
-                const nativeSetter = Object.getOwnPropertyDescriptor(window.parent.HTMLInputElement.prototype, 'value').set;
-                nativeSetter.call(inp, current);
-                inp.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                break;
-              }}
-            }}
-          }} catch(e) {{}}
-
-          if (final) {{
-            onFinalTranscript(final.trim());
-          }}
-        }};
-
-        recognition.onerror = function(event) {{
-          isListening = false;
-          btn.classList.remove('active');
-          btnText.innerText = "Live Microphone (Click & Speak)";
-          status.innerHTML = "<span style='color:#ef4444;'>Microphone notice: " + event.error + ". Click to retry.</span>";
-        }};
-
-        recognition.onend = function() {{
-          isListening = false;
-          btn.classList.remove('active');
-          btnText.innerText = "Live Microphone (Click & Speak)";
-        }};
-
-        recognition.start();
-      }} catch(err) {{
-        status.innerHTML = "<span style='color:#ef4444;'>Mic error: " + err.message + "</span>";
-      }}
-    }}
-
-    function onFinalTranscript(text) {{
-      try {{
-        const pDoc = window.parent.document;
-        const inputs = pDoc.querySelectorAll('input[type="text"]');
-        for (const inp of inputs) {{
-          if (inp.placeholder && (inp.placeholder.includes('Diabetes') || inp.placeholder.includes('disease') || inp.placeholder.includes('medicine') || inp.placeholder.includes('e.g.'))) {{
-            const nativeSetter = Object.getOwnPropertyDescriptor(window.parent.HTMLInputElement.prototype, 'value').set;
-            nativeSetter.call(inp, text);
-            inp.dispatchEvent(new Event('input', {{ bubbles: true }}));
-            inp.dispatchEvent(new Event('change', {{ bubbles: true }}));
-            break;
-          }}
-        }}
-
-        setTimeout(() => {{
-          const btns = pDoc.querySelectorAll('button');
-          for (const b of btns) {{
-            const bt = (b.innerText || '').toLowerCase();
-            if (bt.includes('search disease') || bt.includes('search medication') || bt.includes('search')) {{
-              b.click();
-              break;
-            }}
-          }}
-        }}, 350);
-
-        const url = new URL(window.parent.location.href);
-        url.searchParams.set('live_voice_text', encodeURIComponent(text));
-        url.searchParams.set('live_voice_module', targetModule);
-        window.parent.location.href = url.href;
-      }} catch(e) {{
-        console.error("Error finalizing transcript:", e);
-      }}
-    }}
-    </script>
-    </body>
-    </html>
-    """
-    components.html(web_mic_html, height=58)
-
-    col_live, col_alt = st.columns([3, 2])
-
-    # 1. Fallback PC Hardware Mic Button
-    with col_live:
-        btn_label = "🎤 PC Hardware Mic (डायरेक्ट माइक)" if user_active_lang == "hi" else "🎤 PC Hardware Mic (Direct Input)"
-        if st.button(btn_label, key=f"hw_mic_btn_{module_key}", use_container_width=True):
+    with col_pc:
+        # Direct PC Hardware Microphone Fallback
+        pc_label = "🎤 Direct PC Mic"
+        if st.button(pc_label, key=f"hw_mic_btn_{module_key}", use_container_width=True, help="Record live directly using your PC hardware microphone"):
             lang_prompt = "Speak in English or Hindi" if user_active_lang == "en" else "हिन्दी या English में बोलिए"
             with st.spinner(f"🔴 Live Microphone Active... {lang_prompt}..."):
                 success, text, lang_code = voice_service.record_live_microphone(
                     timeout=5, phrase_time_limit=8, hinted_lang=user_active_lang
                 )
-
                 if success and text:
                     lang_label = "हिन्दी (Hindi)" if lang_code == "hi" else "English"
-
                     if patient_id and patient_db:
                         try:
                             from voice.voice_assistant import conversational_assistant
@@ -321,51 +139,49 @@ def render_voice_input_widget(
                 else:
                     st.warning("⚠️ Microphone could not capture speech. Please ensure mic permissions are allowed and try speaking again!")
 
-    # 2. Secondary Browser Audio File / Recording
-    with col_alt:
-        with st.popover("📁 Audio File / Clip (वैकल्पिक)", use_container_width=True):
-            st.markdown("<p style='color:#94a3b8; font-size:0.8rem; margin:0 0 4px 0;'>Record or upload an audio clip via browser:</p>", unsafe_allow_html=True)
-            audio_data = st.audio_input(
-                f"Audio ({module_key})",
-                key=f"audio_input_{module_key}_{audio_ver}",
-                label_visibility="collapsed"
-            )
+    # Process recognized speech from Browser Live Microphone
+    if live_res:
+        captured_text = ""
+        captured_ts = 0
+        if isinstance(live_res, dict):
+            captured_text = live_res.get("text", "").strip()
+            captured_ts = live_res.get("ts", 0)
+        elif isinstance(live_res, str):
+            captured_text = live_res.strip()
+            captured_ts = 1
 
-            if audio_data is not None:
-                audio_cache_key = f"_last_audio_{module_key}"
-                current_bytes = audio_data.getvalue()
+        last_ts_key = f"_last_live_mic_ts_{module_key}"
+        if captured_text and captured_ts != st.session_state.get(last_ts_key):
+            st.session_state[last_ts_key] = captured_ts
 
-                if st.session_state.get(audio_cache_key) != current_bytes:
-                    st.session_state[audio_cache_key] = current_bytes
+            if user_active_lang == "en":
+                if "डायबिटीज" in captured_text or "डायबिटीज़" in captured_text:
+                    captured_text = "Diabetes"
+                elif "अस्थमा" in captured_text or "दमा" in captured_text:
+                    captured_text = "Asthma"
+                elif "निमोनिया" in captured_text:
+                    captured_text = "Pneumonia"
 
-                    with st.spinner("🎙️ Transcribing audio clip..."):
-                        success, text, lang_code = voice_service.transcribe_audio_bytes(
-                            current_bytes, filename=f"{module_key}.wav", hinted_lang=user_active_lang
-                        )
+            lang_label = "English" if user_active_lang == "en" else "हिन्दी (Hindi)"
 
-                        if success and text:
-                            lang_label = "हिन्दी (Hindi)" if lang_code == "hi" else "English"
+            if patient_id and patient_db:
+                try:
+                    from voice.voice_assistant import conversational_assistant
+                    is_allg, allg_data = conversational_assistant.check_and_record_allergy_from_text(
+                        captured_text, patient_id=patient_id, patient_db=patient_db
+                    )
+                    if is_allg and allg_data:
+                        st.session_state[f"allergy_flash_{module_key}"] = allg_data
+                except Exception as e:
+                    print(f"[VoiceUI] Allergy check error: {e}")
 
-                            if patient_id and patient_db:
-                                try:
-                                    from voice.voice_assistant import conversational_assistant
-                                    is_allg, allg_data = conversational_assistant.check_and_record_allergy_from_text(
-                                        text, patient_id=patient_id, patient_db=patient_db
-                                    )
-                                    if is_allg and allg_data:
-                                        st.session_state[f"allergy_flash_{module_key}"] = allg_data
-                                except Exception as e:
-                                    print(f"[VoiceUI] Allergy check error: {e}")
-
-                            st.session_state[f"last_voice_{module_key}"] = (text, lang_label)
-                            st.session_state[target_state_key] = text
-                            if module_key in widget_map:
-                                st.session_state[widget_map[module_key]] = text
-                            if trigger_state_key:
-                                st.session_state[trigger_state_key] = True
-                            st.rerun()
-                        else:
-                            st.warning("Could not transcribe audio clip.")
+            st.session_state[f"last_voice_{module_key}"] = (captured_text, lang_label)
+            st.session_state[target_state_key] = captured_text
+            if module_key in widget_map:
+                st.session_state[widget_map[module_key]] = captured_text
+            if trigger_state_key:
+                st.session_state[trigger_state_key] = True
+            st.rerun()
 
     # Show transcription feedback banner with Cancel / Clear button
     voice_info = st.session_state.get(f"last_voice_{module_key}")

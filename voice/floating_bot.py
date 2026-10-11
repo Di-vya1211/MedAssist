@@ -130,35 +130,19 @@ def open_medassist_bot_dialog(patient_id: Optional[int] = None, patient_db = Non
                     _process_bot_query(query_text, patient_id, patient_db)
                     st.rerun()
 
-    # In-dialog Voice Input: Live Mic + Audio Clip option
-    col_live_b, col_aud_b = st.columns([3, 2])
-    with col_live_b:
-        live_btn_text = "🎙️ Live Mic (लाइव बोलें)" if is_hindi else "🎙️ Live Mic (Speak Now)"
-        if st.button(live_btn_text, key="dialog_live_mic_btn", use_container_width=True, type="primary"):
-            user_active_lang = st.session_state.get("language", "en")
-            prompt_lang = "बोलिए..." if is_hindi else "Speak now in English or Hindi..."
-            with st.spinner(f"🔴 Live Mic Active... {prompt_lang}"):
-                from voice.voice_service import voice_service
-                ok, v_text, _ = voice_service.record_live_microphone(timeout=5, phrase_time_limit=8, hinted_lang=user_active_lang)
-                if ok and v_text:
-                    _process_bot_query(v_text, patient_id, patient_db)
-                    st.rerun()
-                else:
-                    st.warning("⚠️ No speech captured. Please speak closer to microphone and try again!")
-    with col_aud_b:
-        with st.popover("📁 Audio Clip", use_container_width=True):
-            v_audio = st.audio_input("Speak to AI Companion", key="dialog_bot_audio_input", label_visibility="collapsed")
-            if v_audio is not None:
-                v_bytes = v_audio.getvalue()
-                if st.session_state.get("_last_dialog_audio_bytes") != v_bytes:
-                    st.session_state._last_dialog_audio_bytes = v_bytes
-                    with st.spinner("🎙️ Transcribing voice..."):
-                        from voice.voice_service import voice_service
-                        user_active_lang = st.session_state.get("language", "en")
-                        ok, v_text, _ = voice_service.transcribe_audio_bytes(v_bytes, "dialog_bot.wav", hinted_lang=user_active_lang)
-                        if ok and v_text:
-                            _process_bot_query(v_text, patient_id, patient_db)
-                            st.rerun()
+    # In-dialog Voice Input: Direct Live Mic
+    live_btn_text = "🎙️ Live Mic (लाइव बोलें)" if is_hindi else "🎙️ Live Mic (Speak Now)"
+    if st.button(live_btn_text, key="dialog_live_mic_btn", use_container_width=True, type="primary"):
+        user_active_lang = st.session_state.get("language", "en")
+        prompt_lang = "बोलिए..." if is_hindi else "Speak now in English or Hindi..."
+        with st.spinner(f"🔴 Live Mic Active... {prompt_lang}"):
+            from voice.voice_service import voice_service
+            ok, v_text, _ = voice_service.record_live_microphone(timeout=5, phrase_time_limit=8, hinted_lang=user_active_lang)
+            if ok and v_text:
+                _process_bot_query(v_text, patient_id, patient_db)
+                st.rerun()
+            else:
+                st.warning("⚠️ No speech captured. Please speak closer to microphone and try again!")
 
     # Question Input Form
     placeholder = "अपना सवाल यहाँ लिखें..." if is_hindi else "Ask any medical or health question..."
