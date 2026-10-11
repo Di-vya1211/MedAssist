@@ -1017,10 +1017,11 @@ def main():
         )
 
         # Disease Search Field
-        default_disease = st.session_state.get("disease_input", "")
+        if "disease_text_field" not in st.session_state:
+            st.session_state.disease_text_field = st.session_state.get("disease_input", "")
+
         disease_name = st.text_input(
             "Enter disease name:",
-            value=default_disease,
             placeholder="e.g., Diabetes, Asthma, Pneumonia, Arthritis, Malaria...",
             key="disease_text_field"
         )
@@ -1030,17 +1031,18 @@ def main():
         with col_search:
             disease_search_clicked = st.button("🔍 Search Disease", use_container_width=True, type="primary")
 
-        # Quick Examples
+        # Quick Examples Callback (runs before widget instantiation)
+        def _set_disease_example(ex_name):
+            st.session_state.disease_text_field = ex_name
+            st.session_state.disease_input = ex_name
+            st.session_state._trigger_disease = True
+
         st.markdown('<p style="color:#64748b; font-size:0.85rem; margin-top:8px;">Quick examples:</p>', unsafe_allow_html=True)
         ex_cols = st.columns(5)
         disease_examples = ["Diabetes", "Asthma", "Pneumonia", "Arthritis", "Coronavirus"]
         for i, ex in enumerate(disease_examples):
             with ex_cols[i]:
-                if st.button(ex, key=f"dis_ex_{ex}", use_container_width=True):
-                    st.session_state.disease_text_field = ex
-                    st.session_state.disease_input = ex
-                    st.session_state._trigger_disease = True
-                    st.rerun()
+                st.button(ex, key=f"dis_ex_{ex}", on_click=_set_disease_example, args=(ex,), use_container_width=True)
 
         # Handle Search Execution
         should_search_disease = disease_search_clicked or st.session_state.get("_trigger_disease", False)
@@ -1278,25 +1280,28 @@ def main():
             patient_db=db
         )
 
+        if "drug_text_input" not in st.session_state:
+            st.session_state.drug_text_input = st.session_state.get("drug_search", "")
+
         drug_query = st.text_input(
             "Enter drug name or health question:",
-            value=st.session_state.get("drug_search", ""),
             placeholder="e.g. Paracetamol, Ibuprofen, 'What medicine helps with hypertension?'...",
             key="drug_text_input"
         )
         st.session_state.drug_search = drug_query
 
-        # Quick Examples
+        # Quick Examples Callback (runs before widget instantiation)
+        def _set_drug_example(ex_name):
+            st.session_state.drug_text_input = ex_name
+            st.session_state.drug_search = ex_name
+            st.session_state._trigger_drug = True
+
         st.markdown('<p style="color:#64748b; font-size:0.85rem;">Quick examples:</p>', unsafe_allow_html=True)
         dex_cols = st.columns(5)
         drug_examples = ["Paracetamol", "Ibuprofen", "Aspirin", "Metformin", "Amoxicillin"]
         for idx, ex in enumerate(drug_examples):
             with dex_cols[idx]:
-                if st.button(ex, key=f"dex_{idx}", use_container_width=True):
-                    st.session_state.drug_text_input = ex
-                    st.session_state.drug_search = ex
-                    st.session_state._trigger_drug = True
-                    st.rerun()
+                st.button(ex, key=f"dex_{idx}", on_click=_set_drug_example, args=(ex,), use_container_width=True)
 
         col_drug_btn, _ = st.columns([1, 4])
         with col_drug_btn:
@@ -1541,12 +1546,13 @@ def main():
             ("📋 Sample Diabetes & Lipid Panel", "lipid", "METABOLIC & LIPID PROFILE REPORT\nPatient: Sunita Devi, Age: 55, Gender: Female\nTest Date: 10-Oct-2026\n\nTEST PARAMETERS:\n- Fasting Blood Sugar (FBS): 168 mg/dL (Normal: 70 - 100 mg/dL) [HIGH - Diabetic Range]\n- HbA1c: 8.4 % (Normal: < 5.7 %, Diabetic: >= 6.5 %) [HIGH]\n- Total Cholesterol: 245 mg/dL (Normal: < 200 mg/dL) [HIGH]\n- LDL Cholesterol: 162 mg/dL (Normal: < 100 mg/dL) [HIGH - Plaque Risk]\n- HDL Cholesterol: 38 mg/dL (Normal: > 50 mg/dL) [LOW]\n- Triglycerides: 220 mg/dL (Normal: < 150 mg/dL) [HIGH]\n\nImpression: Uncontrolled Type 2 Diabetes Mellitus with mixed dyslipidemia. Lifestyle modification and physician review required."),
             ("📋 Sample Renal & Liver Panel", "renal", "RENAL & LIVER FUNCTION REPORT\nPatient: Amit Verma, Age: 48, Gender: Male\nTest Date: 10-Oct-2026\n\nTEST PARAMETERS:\n- Serum Creatinine: 1.8 mg/dL (Normal: 0.7 - 1.3 mg/dL) [HIGH - Impaired Clearance]\n- Blood Urea Nitrogen (BUN): 28 mg/dL (Normal: 7 - 20 mg/dL) [HIGH]\n- Total Bilirubin: 0.9 mg/dL (Normal: 0.2 - 1.2 mg/dL) [Normal]\n- SGPT (ALT): 68 U/L (Normal: < 45 U/L) [MILD ELEVATION]\n- SGOT (AST): 54 U/L (Normal: < 40 U/L) [MILD ELEVATION]\n- Serum Uric Acid: 7.8 mg/dL (Normal: 3.5 - 7.2 mg/dL) [HIGH]\n\nImpression: Mild elevation in renal parameters (Creatinine/BUN) and transaminases. Nephrology/Physician follow-up recommended. Avoid nephrotoxic NSAIDs.")
         ]
+        def _set_sample_report(r_text, label):
+            st.session_state.active_report_text = r_text
+            st.session_state.active_report_name = label
+
         for idx, (label, key_suffix, r_text) in enumerate(sample_reports_data):
             with r_cols[idx]:
-                if st.button(label, key=f"sample_rep_btn_{key_suffix}", use_container_width=True):
-                    st.session_state.active_report_text = r_text
-                    st.session_state.active_report_name = label
-                    st.rerun()
+                st.button(label, key=f"sample_rep_btn_{key_suffix}", on_click=_set_sample_report, args=(r_text, label), use_container_width=True)
 
         raw_report_text = None
         temp_path = None
@@ -1750,16 +1756,23 @@ def main():
             help_text="Speak symptoms in Hindi or English (e.g. 'मुझे 3 दिन से तेज बुखार और सिरदर्द है')"
         )
 
+        if "symp_area" not in st.session_state:
+            st.session_state.symp_area = st.session_state.get("symptom_input", "")
+
         symp_text = st.text_area(
             "Describe your symptoms:",
-            value=st.session_state.get("symptom_input", ""),
             placeholder="e.g., I have had fever, dry cough, and vomiting for 2 days...",
             height=100,
             key="symp_area"
         )
         st.session_state.symptom_input = symp_text
 
-        # Quick Add Pills / Examples
+        # Quick Add Pills / Examples Callback (runs before widget instantiation)
+        def _set_symptom_example(s_val):
+            st.session_state.symp_area = s_val
+            st.session_state.symptom_input = s_val
+            st.session_state._trigger_symptoms = True
+
         st.markdown("<p style='color:#64748b; font-size:0.85rem;'>Quick examples (Click to analyze):</p>", unsafe_allow_html=True)
         q_cols = st.columns(5)
         sample_symptom_combos = [
@@ -1771,11 +1784,7 @@ def main():
         ]
         for idx, (label, s_text) in enumerate(sample_symptom_combos):
             with q_cols[idx]:
-                if st.button(label, key=f"qsym_{idx}", use_container_width=True):
-                    st.session_state.symp_area = s_text
-                    st.session_state.symptom_input = s_text
-                    st.session_state._trigger_symptoms = True
-                    st.rerun()
+                st.button(label, key=f"qsym_{idx}", on_click=_set_symptom_example, args=(s_text,), use_container_width=True)
 
         col_chk_btn, _ = st.columns([1, 4])
         with col_chk_btn:

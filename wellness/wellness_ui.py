@@ -129,34 +129,38 @@ def render_wellness_hub_tab(patient_id: Optional[int] = None, patient_db = None)
 
     # 3. Search Bar
     col_input, col_btn, col_clear = st.columns([5, 1.5, 1])
+    if "wellness_search_input" not in st.session_state:
+        st.session_state.wellness_search_input = st.session_state.get("wellness_search_query", "")
+
     with col_input:
         user_query = st.text_input(
             "Search Wellness Topics:",
-            value=st.session_state.get("wellness_search_query", ""),
             placeholder="Search symptoms or remedies (e.g., dandruff, acidity, constipation, sleep, hair fall, stress...)",
             key="wellness_search_input",
             label_visibility="collapsed"
         )
         st.session_state.wellness_search_query = user_query
 
+    def _reset_wellness():
+        st.session_state.wellness_search_input = ""
+        st.session_state.wellness_search_query = ""
+
+    def _set_wellness_example(ex_val):
+        st.session_state.wellness_search_input = ex_val
+        st.session_state.wellness_search_query = ex_val
+
     with col_btn:
         search_clicked = st.button("🔍 Search", key="btn_wellness_search", use_container_width=True, type="primary")
 
     with col_clear:
-        if st.button("✕ Reset", key="btn_wellness_clear", use_container_width=True):
-            st.session_state.wellness_search_query = ""
-            st.session_state.wellness_search_input = ""
-            st.rerun()
+        st.button("✕ Reset", key="btn_wellness_clear", on_click=_reset_wellness, use_container_width=True)
 
     # Quick Remedy Examples
     st.markdown("<p style='color:#64748b; font-size:0.85rem; margin-top:4px;'>Quick remedy examples:</p>", unsafe_allow_html=True)
     w_cols = st.columns(5)
     for idx, ex in enumerate(["Dandruff", "Acne", "Constipation", "Insomnia", "Stress"]):
         with w_cols[idx]:
-            if st.button(ex, key=f"well_ex_{idx}", use_container_width=True):
-                st.session_state.wellness_search_input = ex
-                st.session_state.wellness_search_query = ex
-                st.rerun()
+            st.button(ex, key=f"well_ex_{idx}", on_click=_set_wellness_example, args=(ex,), use_container_width=True)
 
     # Determine Active Search Query
     active_query = (user_query or st.session_state.get("wellness_search_query", "")).strip()
