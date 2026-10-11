@@ -48,69 +48,92 @@ class VoiceService:
         if not text:
             return hinted_lang or "en"
 
+        text_str = text.strip()
+        has_devanagari = bool(re.search(r'[\u0900-\u097F]', text_str))
+        has_latin = bool(re.search(r'[a-zA-Z]', text_str))
+
+        # If user explicitly has English active and text has English characters without Devanagari, always treat as English
+        if hinted_lang in ["en", "english"] and has_latin and not has_devanagari:
+            return "en"
+
         # 1. Check Devanagari unicode range (0x0900 - 0x097F)
-        if re.search(r'[\u0900-\u097F]', text):
+        if has_devanagari:
             return "hi"
 
         # 2. Check Indian scripts
-        if re.search(r'[\u0980-\u09FF]', text):
+        if re.search(r'[\u0980-\u09FF]', text_str):
             return "bn"  # Bengali
-        if re.search(r'[\u0B80-\u0BFF]', text):
+        if re.search(r'[\u0B80-\u0BFF]', text_str):
             return "ta"  # Tamil
-        if re.search(r'[\u0C00-\u0C7F]', text):
+        if re.search(r'[\u0C00-\u0C7F]', text_str):
             return "te"  # Telugu
 
-        # 3. Check for Whisper or explicit UI hint
+        # 3. Check for explicit hint
         if hinted_lang in ["en", "english"]:
-            # If user has English active, only override if strong Devanagari or multiple distinct Hinglish words
-            words = re.findall(r'[a-zA-Z]+', text.lower())
-            hinglish_count = sum(1 for w in words if w in HINGLISH_KEYWORDS)
-            if hinglish_count >= 3:
-                return "hi"
             return "en"
 
         if hinted_lang in ["hi", "hindi"]:
             return "hi"
 
         # 4. Check for Transliterated Hindi words
-        words = re.findall(r'[a-zA-Z]+', text.lower())
+        words = re.findall(r'[a-zA-Z]+', text_str.lower())
         hinglish_count = sum(1 for w in words if w in HINGLISH_KEYWORDS)
         if hinglish_count >= 2:
             return "hi"
 
         return "en"
 
-    def transcribe_audio_bytes(self, audio_bytes: bytes, filename: str = "audio.wav") -> Tuple[bool, str, str]:
+    def transcribe_audio_bytes(self, audio_bytes: bytes, filename: str = "audio.wav", hinted_lang: Optional[str] = None) -> Tuple[bool, str, str]:
         """
         Transcribes audio bytes using Groq Whisper, with fallback to Google SR.
+        Respects active language preference (en or hi).
         Returns: (success, transcribed_text, detected_lang_code)
         """
         if not audio_bytes or len(audio_bytes) < 100:
             return False, "", "en"
 
+        # Determine effective language preference
+        effective_hint = hinted_lang
+        if not effective_hint:
+            try:
+                import streamlit as st
+                effective_hint = st.session_state.get("language", "en")
+            except Exception:
+                effective_hint = "en"
+        effective_hint = "hi" if effective_hint == "hi" else "en"
+
         # 1. Try Groq Whisper (ultra fast & native language detection)
         if self._groq_client:
             try:
-                transcription = self._groq_client.audio.transcriptions.create(
-                    file=(filename, audio_bytes),
-                    model="whisper-large-v3-turbo",
-                    response_format="verbose_json",
-                )
-                text = (transcription.text or "").strip()
-                detected_lang = getattr(transcription, "language", "en") or "en"
-                
-                # Normalize lang tag
-                if detected_lang.lower() in ["hi", "hindi"]:
-                    lang_code = "hi"
-                elif detected_lang.lower() in ["bn", "bengali"]:
-                    lang_code = "bn"
-                elif detected_lang.lower() in ["ta", "tamil"]:
-                    lang_code = "ta"
-                elif detected_lang.lower() in ["te", "telugu"]:
-                    lang_code = "te"
-                else:
-                    lang_code = self.detect_language(text, hinted_lang=detected_lang)
+                whisper_params = {
+                    "file": (filename, audio_bytes),
+                    "model": "whisper-large-v3-turbo",
+                    "response_format": "verbose_json",
+                }
+                if effective_hint == "en":
+                    whisper_params["language"] = "en"
+                    whisper_params["prompt"] = "Medical clinical query: Diabetes, Asthma, Malaria, Blood Pressure, Cough, Symptoms"
+                elif effective_hint == "hi":
+                    whisper_params["language"] = "hi"
+                    whisper_params["prompt"] = "स्वास्थ्य संबंधी जानकारी, दवा, लक्षण, बीमारी"
 
+                transcription = self._groq_client.audio.transcriptions.create(**whisper_params)
+                text = (transcription.text or "").strip()
+                detected_lang = getattr(transcription, "language", effective_hint) or effective_hint
+
+                # If English was hinted and text is mostly Latin characters, keep English
+                if effective_hint == "en":
+                    HINDI_TO_EN_QUICK = {
+                        "डायबिटीज": "Diabetes", "डायबटीज": "Diabetes", "मधुमेह": "Diabetes", "शुगर": "Diabetes",
+                        "अस्थमा": "Asthma", "दमा": "Asthma", "निमोनिया": "Pneumonia", "गठिया": "Arthritis",
+                        "मलेरिया": "Malaria", "डेंगू": "Dengue", "टाइफाइड": "Typhoid", "माइग्रेन": "Migraine",
+                        "कोरोना": "Coronavirus", "कोविड": "COVID-19", "पैरासिटामोल": "Paracetamol"
+                    }
+                    for hi_k, en_k in HINDI_TO_EN_QUICK.items():
+                        if hi_k in text:
+                            text = text.replace(hi_k, en_k)
+
+                lang_code = self.detect_language(text, hinted_lang=effective_hint)
                 if text:
                     return True, text, lang_code
             except Exception as e:
@@ -124,30 +147,49 @@ class VoiceService:
             with sr.AudioFile(buf) as source:
                 audio_data = recognizer.record(source)
 
-            # Try Hindi first if common
-            try:
-                text = recognizer.recognize_google(audio_data, language="hi-IN")
-                if text:
-                    return True, text, "hi"
-            except Exception:
-                pass
+            # Order recognition attempts based on active language
+            lang_order = ["hi-IN", "en-IN"] if effective_hint == "hi" else ["en-IN", "en-US", "hi-IN"]
 
-            # Fallback to English
-            text = recognizer.recognize_google(audio_data, language="en-IN")
-            if text:
-                lang = self.detect_language(text)
-                return True, text, lang
+            for speech_lang in lang_order:
+                try:
+                    text = recognizer.recognize_google(audio_data, language=speech_lang)
+                    if text:
+                        if effective_hint == "en":
+                            HINDI_TO_EN_QUICK = {
+                                "डायबिटीज": "Diabetes", "डायबटीज": "Diabetes", "मधुमेह": "Diabetes", "शुगर": "Diabetes",
+                                "अस्थमा": "Asthma", "दमा": "Asthma", "निमोनिया": "Pneumonia", "गठिया": "Arthritis",
+                                "मलेरिया": "Malaria", "डेंगू": "Dengue", "टाइफाइड": "Typhoid", "माइग्रेन": "Migraine",
+                                "कोरोना": "Coronavirus", "कोविड": "COVID-19", "पैरासिटामोल": "Paracetamol"
+                            }
+                            for hi_k, en_k in HINDI_TO_EN_QUICK.items():
+                                if hi_k in text:
+                                    text = text.replace(hi_k, en_k)
+
+                        primary_code = "hi" if "hi" in speech_lang else "en"
+                        lang = self.detect_language(text, hinted_lang=effective_hint or primary_code)
+                        return True, text, lang
+                except Exception:
+                    continue
 
         except Exception as e:
             print(f"[VoiceService] Google SR fallback error: {e}")
 
         return False, "", "en"
 
-    def record_live_microphone(self, timeout: int = 5, phrase_time_limit: int = 7) -> Tuple[bool, str, str]:
+    def record_live_microphone(self, timeout: int = 5, phrase_time_limit: int = 7, hinted_lang: Optional[str] = None) -> Tuple[bool, str, str]:
         """
         Records from PC microphone using speech_recognition with multi-device discovery.
         Returns: (success, transcribed_text, detected_lang_code)
         """
+        effective_hint = hinted_lang
+        if not effective_hint:
+            try:
+                import streamlit as st
+                effective_hint = st.session_state.get("language", "en")
+            except Exception:
+                effective_hint = "en"
+        effective_hint = "hi" if effective_hint == "hi" else "en"
+
         try:
             import speech_recognition as sr
             recognizer = sr.Recognizer()
@@ -181,27 +223,35 @@ class VoiceService:
             # Try transcribe with Groq whisper first if audio wav is exportable
             try:
                 wav_bytes = audio_data.get_wav_data()
-                success, text, lang = self.transcribe_audio_bytes(wav_bytes, "mic.wav")
+                success, text, lang = self.transcribe_audio_bytes(wav_bytes, "mic.wav", hinted_lang=effective_hint)
                 if success and text:
                     return True, text, lang
             except Exception:
                 pass
 
-            # Fallback to Google SR
-            try:
-                text = recognizer.recognize_google(audio_data, language="hi-IN")
-                if text:
-                    return True, text, "hi"
-            except Exception:
-                pass
+            # Fallback to Google SR with appropriate language priority
+            lang_order = ["hi-IN", "en-IN"] if effective_hint == "hi" else ["en-IN", "en-US", "hi-IN"]
 
-            try:
-                text = recognizer.recognize_google(audio_data, language="en-IN")
-                if text:
-                    lang = self.detect_language(text)
-                    return True, text, lang
-            except Exception:
-                pass
+            for speech_lang in lang_order:
+                try:
+                    text = recognizer.recognize_google(audio_data, language=speech_lang)
+                    if text:
+                        if effective_hint == "en":
+                            HINDI_TO_EN_QUICK = {
+                                "डायबिटीज": "Diabetes", "डायबटीज": "Diabetes", "मधुमेह": "Diabetes", "शुगर": "Diabetes",
+                                "अस्थमा": "Asthma", "दमा": "Asthma", "निमोनिया": "Pneumonia", "गठिया": "Arthritis",
+                                "मलेरिया": "Malaria", "डेंगू": "Dengue", "टाइफाइड": "Typhoid", "माइग्रेन": "Migraine",
+                                "कोरोना": "Coronavirus", "कोविड": "COVID-19", "पैरासिटामोल": "Paracetamol"
+                            }
+                            for hi_k, en_k in HINDI_TO_EN_QUICK.items():
+                                if hi_k in text:
+                                    text = text.replace(hi_k, en_k)
+
+                        primary_code = "hi" if "hi" in speech_lang else "en"
+                        lang = self.detect_language(text, hinted_lang=effective_hint or primary_code)
+                        return True, text, lang
+                except Exception:
+                    continue
 
         except Exception as e:
             print(f"[VoiceService] Live mic error: {e}")

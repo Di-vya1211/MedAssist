@@ -105,8 +105,9 @@ def render_voice_input_widget(
             if st.session_state.get(audio_cache_key) != current_bytes:
                 st.session_state[audio_cache_key] = current_bytes
 
+                user_active_lang = st.session_state.get("language", "en")
                 with st.spinner("🎙️ Transcribing speech & detecting language..."):
-                    success, text, lang_code = voice_service.transcribe_audio_bytes(current_bytes, filename=f"{module_key}.wav")
+                    success, text, lang_code = voice_service.transcribe_audio_bytes(current_bytes, filename=f"{module_key}.wav", hinted_lang=user_active_lang)
 
                     if success and text:
                         lang_label = "हिन्दी (Hindi)" if lang_code == "hi" else "English"
@@ -137,8 +138,9 @@ def render_voice_input_widget(
     with col2:
         st.markdown("<p style='color:#cbd5e1; font-size:0.8rem; font-weight:600; margin-bottom:4px;'>Direct PC Mic:</p>", unsafe_allow_html=True)
         if st.button("🎤 Record PC Mic (6s)", key=f"pc_mic_btn_{module_key}", use_container_width=True):
+            user_active_lang = st.session_state.get("language", "en")
             with st.spinner("🎤 Listening from PC mic (6s)... Speak in Hindi or English"):
-                success, text, lang_code = voice_service.record_live_microphone(timeout=6, phrase_time_limit=8)
+                success, text, lang_code = voice_service.record_live_microphone(timeout=6, phrase_time_limit=8, hinted_lang=user_active_lang)
 
                 if success and text:
                     lang_label = "हिन्दी (Hindi)" if lang_code == "hi" else "English"

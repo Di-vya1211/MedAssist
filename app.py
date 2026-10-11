@@ -70,7 +70,7 @@ import_errors = []
 
 # Disease Info
 try:
-    from disease_info_module_complete.disease_info import DiseaseInfoRetriever, format_disease_info
+    from disease_info_module_complete.disease_info import DiseaseInfoRetriever, format_disease_info, normalize_disease_query
     DISEASE_MODULE_OK = True
 except Exception as e:
     import_errors.append(f"disease_info: {str(e)}")
@@ -136,53 +136,92 @@ medical_tests_db = load_medical_tests()
 
 def get_fallback_tests(disease_name: str, medical_tests_db: dict, min_tests: int = 8):
     """Find related tests by keyword matching if LLM returns too few."""
-    if not medical_tests_db or not disease_name:
+    if not disease_name:
         return []
 
-    disease_lower = disease_name.lower()
+    norm_name = normalize_disease_query(disease_name) if 'normalize_disease_query' in globals() else disease_name
+    disease_lower = f"{disease_name} {norm_name}".lower()
     keywords = [w for w in disease_lower.split() if len(w) > 2]
     expanded_keywords = set(keywords)
     common_medical = ['blood', 'urine', 'x-ray', 'test', 'scan', 'culture', 
                       'panel', 'count', 'function', 'level', 'screening', 'exam']
     expanded_keywords.update(common_medical)
 
-    if 'diabetes' in disease_lower:
-        expanded_keywords.update(['glucose', 'a1c', 'hba1c', 'sugar', 'insulin', 'lipid', 'kidney'])
-    elif 'asthma' in disease_lower or 'lung' in disease_lower:
+    if any(k in disease_lower for k in ['diabetes', 'sugar', 'डायबिटीज', 'मधुमेह', 'glucose']):
+        expanded_keywords.update(['glucose', 'a1c', 'hba1c', 'sugar', 'insulin', 'lipid', 'kidney', 'urinalysis'])
+    elif any(k in disease_lower for k in ['asthma', 'lung', 'अस्थमा', 'दमा', 'respiratory']):
         expanded_keywords.update(['spirometry', 'lung', 'breath', 'pulmonary', 'peak flow', 'chest', 'x-ray'])
-    elif 'heart' in disease_lower or 'cardiac' in disease_lower:
+    elif any(k in disease_lower for k in ['heart', 'cardiac', 'कार्डियक', 'दिल']):
         expanded_keywords.update(['cholesterol', 'ecg', 'troponin', 'echo', 'stress', 'lipid'])
-    elif 'kidney' in disease_lower or 'renal' in disease_lower:
+    elif any(k in disease_lower for k in ['kidney', 'renal', 'गुर्दा', 'किडनी']):
         expanded_keywords.update(['creatinine', 'bun', 'urinalysis', 'gfr', 'protein', 'albumin'])
-    elif 'liver' in disease_lower or 'hepat' in disease_lower:
-        expanded_keywords.update(['bilirubin', 'alt', 'ast', 'hepatitis', 'prothrombin'])
-    elif 'thyroid' in disease_lower:
-        expanded_keywords.update(['tsh', 't3', 't4', 'thyroxine', 'antibody'])
-    elif 'cancer' in disease_lower or 'tumor' in disease_lower:
-        expanded_keywords.update(['biopsy', 'marker', 'mammography', 'colonoscopy', 'psa', 'cea'])
-    elif 'blood' in disease_lower:
-        expanded_keywords.update(['cbc', 'hemoglobin', 'hematocrit', 'platelet', 'wbc', 'rbc'])
-    elif 'pneumonia' in disease_lower or 'chest' in disease_lower:
-        expanded_keywords.update(['chest', 'x-ray', 'sputum', 'culture', 'blood', 'oxygen'])
-    elif 'arthritis' in disease_lower or 'joint' in disease_lower:
+    elif any(k in disease_lower for k in ['liver', 'hepat', 'लीवर', 'लिवर', 'पीलिया', 'jaundice']):
+        expanded_keywords.update(['bilirubin', 'alt', 'ast', 'hepatitis', 'prothrombin', 'lft'])
+    elif any(k in disease_lower for k in ['malaria', 'मलेरिया']):
+        expanded_keywords.update(['malaria', 'smear', 'blood', 'platelet', 'cbc', 'parasite'])
+    elif any(k in disease_lower for k in ['dengue', 'डेंगू']):
+        expanded_keywords.update(['dengue', 'ns1', 'platelet', 'hematocrit', 'cbc', 'elisa'])
+    elif any(k in disease_lower for k in ['typhoid', 'टाइफाइड']):
+        expanded_keywords.update(['widal', 'typhidot', 'culture', 'cbc'])
+    elif any(k in disease_lower for k in ['tuberculosis', 'tb', 'टीबी']):
+        expanded_keywords.update(['mantoux', 'afb', 'sputum', 'x-ray', 'genexpert', 'chest'])
+    elif any(k in disease_lower for k in ['anemia', 'एनीमिया', 'खून की कमी']):
+        expanded_keywords.update(['hemoglobin', 'ferritin', 'iron', 'cbc', 'tibc', 'smear'])
+    elif any(k in disease_lower for k in ['hypertension', 'blood pressure', 'bp', 'हाई बीपी']):
+        expanded_keywords.update(['blood pressure', 'ecg', 'lipid', 'creatinine', 'urinalysis'])
+    elif any(k in disease_lower for k in ['pneumonia', 'निमोनिया', 'chest']):
+        expanded_keywords.update(['chest', 'x-ray', 'sputum', 'culture', 'blood', 'oxygen', 'wbc'])
+    elif any(k in disease_lower for k in ['arthritis', 'गठिया', 'joint']):
         expanded_keywords.update(['rheumatoid', 'anti-ccp', 'crp', 'esr', 'ana', 'uric', 'x-ray'])
+    elif any(k in disease_lower for k in ['thyroid', 'थायराइड']):
+        expanded_keywords.update(['tsh', 't3', 't4', 'thyroxine', 'antibody'])
+    elif any(k in disease_lower for k in ['cancer', 'tumor', 'कैंसर']):
+        expanded_keywords.update(['biopsy', 'marker', 'mammography', 'colonoscopy', 'psa', 'cea'])
+    elif any(k in disease_lower for k in ['blood', 'रक्त']):
+        expanded_keywords.update(['cbc', 'hemoglobin', 'hematocrit', 'platelet', 'wbc', 'rbc'])
 
     scored_tests = []
-    for test_name, test_data in medical_tests_db.items():
-        score = 0
-        test_text = (test_name + ' ' + 
-                    str(test_data.get('description', '')) + ' ' + 
-                    str(test_data.get('why_done', ''))).lower()
+    if medical_tests_db:
+        for test_name, test_data in medical_tests_db.items():
+            score = 0
+            test_text = (test_name + ' ' + 
+                        str(test_data.get('description', '')) + ' ' + 
+                        str(test_data.get('why_done', ''))).lower()
 
-        for kw in expanded_keywords:
-            if kw in test_text:
-                score += 3
+            for kw in expanded_keywords:
+                if kw in test_text:
+                    score += 3
 
-        if score > 0:
-            scored_tests.append((score, test_name))
+            if score > 0:
+                scored_tests.append((score, test_name.title()))
 
     scored_tests.sort(reverse=True)
-    return [name for _, name in scored_tests[:min_tests]]
+    tests = [name for _, name in scored_tests[:min_tests]]
+
+    # Curated backup tests if database match had fewer items
+    if len(tests) < min_tests:
+        default_map = {
+            "diabetes": ["A1C Hemoglobin Test", "Fasting Blood Glucose Test", "Oral Glucose Tolerance Test (OGTT)", "Random Plasma Glucose Test", "Urinalysis for Ketones", "Lipid Panel", "Serum Creatinine Test", "Microalbuminuria Test"],
+            "asthma": ["Spirometry Test", "Peak Expiratory Flow (PEF) Test", "Fractional Exhaled Nitric Oxide (FeNO) Test", "Methacholine Challenge Test", "Chest X-Ray", "Allergy Skin Prick Testing", "Complete Blood Count", "Pulse Oximetry"],
+            "pneumonia": ["Chest X-Ray", "Pulse Oximetry", "Complete Blood Count", "Blood Cultures", "Sputum Culture and Gram Stain", "CT Scan of Chest", "Arterial Blood Gas (ABG) Test", "Pleural Fluid Culture"],
+            "arthritis": ["Joint X-Rays", "Rheumatoid Factor (RF) Blood Test", "Anti-CCP Antibody Test", "Erythrocyte Sedimentation Rate (ESR)", "C-Reactive Protein (CRP)", "Joint Fluid Analysis", "MRI of Joints", "Complete Blood Count"],
+            "malaria": ["Malaria Rapid Diagnostic Test (RDT)", "Peripheral Blood Smear", "Complete Blood Count", "Quantitative Buffy Coat (QBC) Test", "Liver Function Tests", "Serum Bilirubin Test"],
+            "dengue": ["Dengue NS1 Antigen Test", "Dengue IgM/IgG Antibody ELISA", "Complete Blood Count (Platelets)", "Liver Function Tests", "Serum Electrolyte Panel"],
+            "typhoid": ["Widal Test", "Blood Culture for Salmonella", "Stool Culture and Examination", "Typhidot Rapid IgM Test", "Complete Blood Count"],
+            "tuberculosis": ["Mantoux Tuberculin Skin Test (TST)", "Interferon-Gamma Release Assay (IGRA)", "Sputum Smear Microscopy (AFB)", "GeneXpert MTB/RIF Assay", "Chest X-Ray"],
+            "jaundice": ["Serum Bilirubin Test (Total and Direct)", "Liver Function Tests (ALT/AST)", "Viral Hepatitis Panel", "Abdominal Ultrasound", "Complete Blood Count"],
+            "anemia": ["Complete Blood Count (CBC with Hb)", "Peripheral Blood Smear", "Serum Ferritin Level", "Total Iron-Binding Capacity (TIBC)", "Vitamin B12 and Folate Levels"],
+            "hypertension": ["Ambulatory Blood Pressure Monitoring (ABPM)", "Electrocardiogram (ECG)", "Echocardiogram", "Lipid Panel", "Fasting Blood Glucose", "Serum Creatinine Test"]
+        }
+        fallback_list = default_map.get(norm_name.lower(), [
+            "Complete Blood Count (CBC)", "Comprehensive Metabolic Panel (CMP)", "Erythrocyte Sedimentation Rate (ESR)",
+            "C-Reactive Protein (CRP)", "Urinalysis", "Serum Electrolyte Panel", "Diagnostic Ultrasound", "Chest X-Ray"
+        ])
+        for t in fallback_list:
+            if t not in tests and len(tests) < min_tests:
+                tests.append(t)
+
+    return tests
 
 
 def normalize_name(s: str) -> str:
@@ -200,13 +239,41 @@ def fetch_medical_test_details(test_name: str, disease_name: str = "") -> dict:
     Guarantees test_data is NEVER empty.
     """
     clean_name = test_name.strip()
-    norm_key = normalize_name(clean_name)
+
+    # Handle non-ASCII / Hindi test names (e.g. translated badge clicks)
+    lookup_name = clean_name
+    if any(ord(c) > 127 for c in clean_name):
+        h_map = {
+            "ग्लूकोज": "glucose", "शुगर": "sugar", "ए1सी": "a1c", "फास्टिंग": "fasting",
+            "रक्त": "blood", "खून": "blood", "मूत्र": "urine", "यूरिन": "urine",
+            "सीबीसी": "cbc", "लिपिड": "lipid", "कोलेस्ट्रॉल": "cholesterol",
+            "एक्स-रे": "x-ray", "सीटी": "ct scan", "एमआरआई": "mri",
+            "अल्ट्रासाउंड": "ultrasound", "किडनी": "kidney", "क्रीटिनिन": "creatinine",
+            "लीवर": "liver", "लिवर": "liver", "बिलीरुबिन": "bilirubin",
+            "थायराइड": "thyroid", "ईसीजी": "ecg", "इलेक्ट्रोलाइट": "electrolyte",
+            "मलेरिया": "malaria", "डेंगू": "dengue", "टाइफाइड": "typhoid", "विडाल": "widal",
+            "स्पाइरोमेट्री": "spirometry", "बायोप्सी": "biopsy"
+        }
+        for hk, en in h_map.items():
+            if hk in lookup_name:
+                lookup_name = f"{lookup_name} {en}"
+        if TRANSLATION_OK:
+            try:
+                en_trans = agent_translate(clean_name, target_lang="en")
+                if en_trans and en_trans.strip():
+                    lookup_name = f"{lookup_name} {en_trans.strip()}"
+            except Exception:
+                pass
+
+    norm_key = normalize_name(lookup_name)
 
     # 1. Check medical_tests_db
     matched_data = None
     if medical_tests_db:
         if clean_name.lower() in medical_tests_db:
             matched_data = medical_tests_db[clean_name.lower()]
+        elif norm_key in medical_tests_db:
+            matched_data = medical_tests_db[norm_key]
         else:
             for db_name, db_data in medical_tests_db.items():
                 if norm_key in normalize_name(db_name) or normalize_name(db_name) in norm_key:
@@ -225,7 +292,7 @@ def fetch_medical_test_details(test_name: str, disease_name: str = "") -> dict:
         }
 
     # 2. Check session cache
-    cache_key = f"_cached_test_{clean_name.lower()}"
+    cache_key = f"_cached_test_{normalize_name(clean_name)}"
     if cache_key in st.session_state:
         return st.session_state[cache_key]
 
@@ -235,7 +302,7 @@ def fetch_medical_test_details(test_name: str, disease_name: str = "") -> dict:
         from core.llm import LLMClient
         llm = LLMClient()
         prompt = f"""You are a clinical laboratory medicine expert. Provide structured medical test details for:
-Test Name: "{clean_name}"
+Test Name: "{clean_name}" (Clinical concept: "{lookup_name}")
 Associated Condition: "{disease_name}"
 
 Return ONLY a valid JSON object with these exact keys:
@@ -972,6 +1039,18 @@ def main():
                     try:
                         info = retriever.get_structured_info(effective_disease)
                         result = format_disease_info(info)
+
+                        # Enrich diagnostic tests if too few or contains stubs
+                        tests = [t for t in result.get("diagnostic_tests", []) if t and "consult" not in t.lower() and "see source" not in t.lower()]
+                        if len(tests) < 6:
+                            norm_dis = normalize_disease_query(effective_disease) if 'normalize_disease_query' in globals() else effective_disease
+                            more_tests = get_fallback_tests(norm_dis, medical_tests_db, min_tests=8)
+                            for mt in more_tests:
+                                if mt.title() not in tests and mt.lower() not in [t.lower() for t in tests]:
+                                    tests.append(mt.title())
+                        if tests:
+                            result["diagnostic_tests"] = tests
+
                         st.session_state.disease_result = result
                         if "selected_medical_test" in st.session_state:
                             del st.session_state.selected_medical_test
