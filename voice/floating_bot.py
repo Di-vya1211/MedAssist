@@ -28,16 +28,17 @@ def get_bot_avatar_b64() -> str:
 
 
 def init_floating_bot_state():
-    """Initializes session state for the floating bot dialogue."""
-    if "floating_bot_history" not in st.session_state:
-        is_hindi = st.session_state.get("language", "en") == "hi"
-        greeting = (
-            "नमस्ते! 👋 मैं आपका MedAssist AI साथी हूँ। मैं आज आपकी क्या सहायता कर सकता हूँ? "
-            "आप मुझसे किसी भी बीमारी, दवा, लक्षण, या स्वास्थ्य संबंधी सवाल पूछ सकते हैं।"
-            if is_hindi else
-            "Hello! 👋 I'm your MedAssist AI Companion. How may I help you today? "
-            "You can ask me about symptoms, medicines, side effects, precautions, or any health concern."
-        )
+    """Initializes session state for the floating bot dialogue matching active language."""
+    user_lang = st.session_state.get("language", "en")
+    is_hindi = (user_lang == "hi")
+    greeting = (
+        "नमस्ते! 👋 मैं आपका MedAssist AI साथी हूँ। मैं आज आपकी क्या सहायता कर सकता हूँ? "
+        "आप मुझसे किसी भी बीमारी, दवा, लक्षण, या स्वास्थ्य संबंधी सवाल पूछ सकते हैं।"
+        if is_hindi else
+        "Hello! 👋 I'm your MedAssist AI Companion. How may I help you today? "
+        "You can ask me about symptoms, medicines, side effects, precautions, or any health concern."
+    )
+    if "floating_bot_history" not in st.session_state or not st.session_state.floating_bot_history:
         st.session_state.floating_bot_history = [
             {
                 "role": "assistant",
@@ -46,6 +47,10 @@ def init_floating_bot_state():
                 "allergy_recorded": None
             }
         ]
+        st.session_state.floating_bot_lang = user_lang
+    elif st.session_state.get("floating_bot_lang") != user_lang and len(st.session_state.floating_bot_history) <= 1:
+        st.session_state.floating_bot_history[0]["content"] = greeting
+        st.session_state.floating_bot_lang = user_lang
 
 
 def on_floating_bot_dialog_dismiss():
@@ -123,6 +128,19 @@ def open_medassist_bot_dialog(patient_id: Optional[int] = None, patient_db = Non
             with q_cols[i]:
                 if st.button(label, key=f"chip_dialog_{i}", use_container_width=True):
                     _process_bot_query(query_text, patient_id, patient_db)
+                    st.rerun()
+
+    # In-dialog Browser Voice Input
+    v_audio = st.audio_input("🎙️ Speak to AI Companion", key="dialog_bot_audio_input", label_visibility="collapsed")
+    if v_audio is not None:
+        v_bytes = v_audio.getvalue()
+        if st.session_state.get("_last_dialog_audio_bytes") != v_bytes:
+            st.session_state._last_dialog_audio_bytes = v_bytes
+            with st.spinner("🎙️ Transcribing voice..."):
+                from voice.voice_service import voice_service
+                ok, v_text, _ = voice_service.transcribe_audio_bytes(v_bytes, "dialog_bot.wav")
+                if ok and v_text:
+                    _process_bot_query(v_text, patient_id, patient_db)
                     st.rerun()
 
     # Question Input Form

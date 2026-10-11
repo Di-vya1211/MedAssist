@@ -28,8 +28,14 @@ def get_api_key(key_name: str) -> Optional[str]:
     1. os.environ (case variations)
     2. Streamlit Cloud Secrets (st.secrets root and sub-tables)
     """
+    candidates = [key_name, key_name.upper(), key_name.lower()]
+    if "GEMINI" in key_name.upper() or "GOOGLE" in key_name.upper():
+        candidates.extend(["GEMINI_API_KEY", "GOOGLE_API_KEY", "gemini_api_key", "google_api_key", "GEMINI_KEY", "gemini_key"])
+    elif "GROQ" in key_name.upper():
+        candidates.extend(["GROQ_API_KEY", "groq_api_key", "GROQ_KEY", "groq_key"])
+
     # 1. Environment variables
-    for k in [key_name, key_name.upper(), key_name.lower()]:
+    for k in candidates:
         val = os.getenv(k)
         if val and str(val).strip():
             return str(val).strip()
@@ -38,22 +44,32 @@ def get_api_key(key_name: str) -> Optional[str]:
     try:
         import streamlit as st
         if hasattr(st, "secrets"):
-            for k in [key_name, key_name.upper(), key_name.lower()]:
+            for k in candidates:
                 if k in st.secrets:
                     s_val = st.secrets[k]
                     if isinstance(s_val, str) and s_val.strip():
                         return s_val.strip()
 
             # Nested sections e.g. st.secrets["groq"]["api_key"]
-            name_upper = key_name.upper()
-            if "GROQ" in name_upper and "groq" in st.secrets:
+            if "GROQ" in key_name.upper() and "groq" in st.secrets:
                 sec = st.secrets["groq"]
                 if isinstance(sec, dict) and "api_key" in sec:
                     return str(sec["api_key"]).strip()
-            if "GEMINI" in name_upper and "gemini" in st.secrets:
-                sec = st.secrets["gemini"]
-                if isinstance(sec, dict) and "api_key" in sec:
-                    return str(sec["api_key"]).strip()
+                elif isinstance(sec, str) and sec.strip():
+                    return sec.strip()
+            if ("GEMINI" in key_name.upper() or "GOOGLE" in key_name.upper()):
+                if "gemini" in st.secrets:
+                    sec = st.secrets["gemini"]
+                    if isinstance(sec, dict) and "api_key" in sec:
+                        return str(sec["api_key"]).strip()
+                    elif isinstance(sec, str) and sec.strip():
+                        return sec.strip()
+                if "google" in st.secrets:
+                    sec = st.secrets["google"]
+                    if isinstance(sec, dict) and "api_key" in sec:
+                        return str(sec["api_key"]).strip()
+                    elif isinstance(sec, str) and sec.strip():
+                        return sec.strip()
     except Exception:
         pass
 
@@ -109,10 +125,13 @@ class LLMManager:
                 import google.generativeai as genai
                 api_key = get_api_key("GEMINI_API_KEY")
                 if not api_key:
-                    raise ValueError("GEMINI_API_KEY not found in env or st.secrets")
+                    raise ValueError("GEMINI_API_KEY / GOOGLE_API_KEY not found in env or st.secrets")
 
                 genai.configure(api_key=api_key)
-                self.llm = genai.GenerativeModel("gemini-3.8-flash")
+                try:
+                    self.llm = genai.GenerativeModel("gemini-1.5-flash")
+                except Exception:
+                    self.llm = genai.GenerativeModel("gemini-2.0-flash")
                 self._is_direct_genai = True
                 print("[LLM] Gemini (direct genai) loaded")
             except Exception as e:
@@ -120,7 +139,7 @@ class LLMManager:
                     from langchain_google_genai import ChatGoogleGenerativeAI
                     api_key = get_api_key("GEMINI_API_KEY")
                     self.llm = ChatGoogleGenerativeAI(
-                        model="gemini-3.8-flash",
+                        model="gemini-1.5-flash",
                         temperature=0.2,
                         max_output_tokens=2048,
                         google_api_key=api_key
@@ -196,6 +215,10 @@ class LLMClient:
         print("[LLMClient] Warning: Could not initialize cloud LLMs. Check API keys.")
 
     def generate(self, prompt: str) -> str:
+        # Re-attempt initialization dynamically if startup was before keys were ready
+        if self._manager is None:
+            self._init_with_fallback()
+
         # Attempt primary provider
         if self._manager is not None:
             try:

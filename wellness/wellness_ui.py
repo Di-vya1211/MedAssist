@@ -148,8 +148,18 @@ def render_wellness_hub_tab(patient_id: Optional[int] = None, patient_db = None)
             st.session_state.wellness_search_input = ""
             st.rerun()
 
+    # Quick Remedy Examples
+    st.markdown("<p style='color:#64748b; font-size:0.85rem; margin-top:4px;'>Quick remedy examples:</p>", unsafe_allow_html=True)
+    w_cols = st.columns(5)
+    for idx, ex in enumerate(["Dandruff", "Acne", "Constipation", "Insomnia", "Stress"]):
+        with w_cols[idx]:
+            if st.button(ex, key=f"well_ex_{idx}", use_container_width=True):
+                st.session_state.wellness_search_input = ex
+                st.session_state.wellness_search_query = ex
+                st.rerun()
+
     # Determine Active Search Query
-    active_query = st.session_state.wellness_search_query.strip()
+    active_query = (user_query or st.session_state.get("wellness_search_query", "")).strip()
     is_search_active = bool(active_query)
 
     st.markdown("<hr style='border-color: rgba(255,255,255,0.08); margin: 12px 0 16px 0;'>", unsafe_allow_html=True)

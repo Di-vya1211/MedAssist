@@ -109,12 +109,7 @@ def render_voice_input_widget(
                     success, text, lang_code = voice_service.transcribe_audio_bytes(current_bytes, filename=f"{module_key}.wav")
 
                     if success and text:
-                        # Auto-switch language if Hindi detected
-                        if lang_code == "hi":
-                            st.session_state.language = "hi"
-                            lang_label = "हिन्दी (Hindi)"
-                        else:
-                            lang_label = "English"
+                        lang_label = "हिन्दी (Hindi)" if lang_code == "hi" else "English"
 
                         # If user spoke an allergy in Drug Info or elsewhere
                         if patient_id and patient_db:
@@ -146,11 +141,7 @@ def render_voice_input_widget(
                 success, text, lang_code = voice_service.record_live_microphone(timeout=6, phrase_time_limit=8)
 
                 if success and text:
-                    if lang_code == "hi":
-                        st.session_state.language = "hi"
-                        lang_label = "हिन्दी (Hindi)"
-                    else:
-                        lang_label = "English"
+                    lang_label = "हिन्दी (Hindi)" if lang_code == "hi" else "English"
 
                     if patient_id and patient_db:
                         try:
@@ -171,7 +162,7 @@ def render_voice_input_widget(
                         st.session_state[trigger_state_key] = True
                     st.rerun()
                 else:
-                    st.warning("Speech not recognized from PC microphone.")
+                    st.warning("⚠️ PC hardware mic could not record. Please use the '🎙️ Web Audio' widget on the left to record directly via your browser!")
 
     # Show transcription feedback banner with Cancel / Clear button
     voice_info = st.session_state.get(f"last_voice_{module_key}")

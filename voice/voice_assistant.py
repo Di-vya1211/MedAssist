@@ -187,31 +187,7 @@ Always end with a gentle reminder to consult a qualified physician."""
                 raise ValueError("LLM response too short")
         except Exception as e:
             print(f"[VoiceAssistant] Response generation fallback notice: {e}")
-            q_low = clean_msg.lower()
-            if any(w in q_low for w in ["fever", "bukhar", "temperature", "tapmaan"]):
-                response_text = (
-                    "बुखार आमतौर पर किसी संक्रमण के खिलाफ शरीर की स्वाभाविक प्रतिक्रिया है। पर्याप्त पानी और तरल पदार्थ पिएं, आराम करें और तापमान मापते रहें। यदि बुखार 102°F से अधिक रहता है या 3 दिनों से ज्यादा रहता है, तो कृपया तुरंत डॉक्टर से संपर्क करें।"
-                    if is_hindi else
-                    "Fever is often the body's natural response to an infection. Stay well hydrated, rest adequately, and keep track of your body temperature. If the fever stays above 102°F (38.9°C) or lasts more than 3 days, please consult a physician promptly."
-                )
-            elif any(w in q_low for w in ["headache", "sirdard", "sir dard"]):
-                response_text = (
-                    "सिरदर्द थकान, तनाव या निर्जलीकरण के कारण हो सकता है। शांत कमरे में आराम करें, पानी पिएं और स्क्रीन से दूर रहें। यदि सिरदर्द अचानक और बहुत तीव्र हो, तो तुरंत चिकित्सक से परामर्श लें।"
-                    if is_hindi else
-                    "Headaches are frequently caused by stress, dehydration, or eye strain. Drink plenty of water and rest in a quiet, dimly lit room. Seek immediate medical attention if the headache is sudden, severe, or accompanied by vision changes."
-                )
-            elif any(w in q_low for w in ["cough", "khansi", "cold", "sardi", "jukham"]):
-                response_text = (
-                    "हल्की सर्दी-खांसी में गर्म पानी का सेवन, भाप लेना और तुलसी-अदरक का काढ़ा फायदेमंद होता है। यदि सांस लेने में कठिनाई हो या खांसी 2 सप्ताह से अधिक रहे, तो डॉक्टर को दिखाएं।"
-                    if is_hindi else
-                    "For a mild cold and cough, staying hydrated with warm fluids and steam inhalation can help soothe airways. If you experience difficulty breathing, high fever, or the cough persists beyond two weeks, please see a doctor."
-                )
-            else:
-                response_text = (
-                    "आपके स्वास्थ्य की देखभाल के लिए पर्याप्त विश्राम और संतुलित आहार आवश्यक है। यदि आपके लक्षण बने रहते हैं या बढ़ रहे हैं, तो कृपया व्यक्तिगत जांच के लिए डॉक्टर से अवश्य सलाह लें।"
-                    if is_hindi else
-                    "To support your recovery, ensure you get sufficient rest and stay properly hydrated. If your symptoms are persistent or worsening, please consult a qualified healthcare professional for a personalized clinical evaluation."
-                )
+            response_text = self._generate_smart_fallback(clean_msg, is_hindi)
 
         # Step 5: Generate Speech Audio
         audio_filename = f"voice_resp_{patient_id or 'anon'}.mp3"
@@ -224,6 +200,86 @@ Always end with a gentle reminder to consult a qualified physician."""
             "allergy_info": saved_allergy_info,
             "audio_path": audio_path
         }
+
+    def _generate_smart_fallback(self, clean_msg: str, is_hindi: bool) -> str:
+        """Domain-grounded clinical fallback when LLM API is unavailable."""
+        q_low = clean_msg.lower()
+
+        # 1. Drug lookup in FDA database (e.g. Paracetamol, Ibuprofen, Aspirin)
+        try:
+            from core.drug_qa_backend import DrugQABackend
+            d_back = DrugQABackend()
+            d_match = d_back.get_by_name(clean_msg)
+            if not d_match:
+                cand = d_back.search(clean_msg, top_k=1)
+                if cand:
+                    d_match = cand[0]
+            if d_match:
+                d_name = d_match.get("name", "Medication").title()
+                d_ind = (d_match.get("indications") or "Symptom relief and management.")[:180]
+                d_dose = (d_match.get("dosage") or "Take as directed by doctor or product instructions.")[:140]
+                d_warn = (d_match.get("warnings") or "Consult a licensed physician before taking.")[:160]
+                if is_hindi:
+                    return f"{d_name}: इसका उपयोग {d_ind} के लिए किया जाता है। सामान्य खुराक: {d_dose}। मुख्य चेतावनी: {d_warn}। किसी भी दवा के सेवन से पहले डॉक्टर या फार्मासिस्ट से परामर्श अवश्य लें।"
+                else:
+                    return f"{d_name}: Indicated for {d_ind}. Typical dosage: {d_dose}. Important warnings: {d_warn}. Always consult your physician or pharmacist before taking any medication."
+        except Exception:
+            pass
+
+        # 2. Asthma / Respiratory
+        if any(w in q_low for w in ["asthma", "saans", "breathing", "wheezing", "dama"]):
+            if is_hindi:
+                return "अस्थमा (दमा) में वायुमार्ग में सूजन आ जाती है। धूल, धुएं, परागकण, और ठंडी हवा से बचें। चिकित्सक द्वारा निर्धारित इन्हेलर हमेशा अपने पास रखें। यदि सांस लेने में अत्यधिक तकलीफ या सीने में तेज दबाव हो, तो तुरंत आपातकालीन चिकित्सा सहायता (108) लें।"
+            else:
+                return "Asthma causes chronic inflammation and airway narrowing. Key precautions include avoiding dust, smoke, cold air, and known allergens. Keep your prescribed rescue inhaler accessible at all times. Seek immediate emergency medical care if you experience severe breathlessness."
+
+        # 3. Diabetes / Blood Sugar
+        if any(w in q_low for w in ["diabetes", "sugar", "madhumeh", "glucose"]):
+            if is_hindi:
+                return "मधुमेह (डायबिटीज) में रक्त शर्करा का नियंत्रण आवश्यक है। कम मीठा और उच्च फाइबर युक्त आहार लें, प्रतिदिन 30 मिनट टहलें, और समय-समय पर फास्टिंग व खाने के बाद शुगर जांचें। डॉक्टर द्वारा दी गई दवाएं नियमित लें।"
+            else:
+                return "Diabetes requires diligent blood sugar tracking and dietary moderation. Emphasize low-glycemic, fiber-rich foods, daily exercise, and regular fasting/post-meal glucose checks under physician supervision."
+
+        # 4. Blood Pressure / Hypertension
+        if any(w in q_low for w in ["bp", "blood pressure", "hypertension", "uchh raktchap"]):
+            if is_hindi:
+                return "उच्च रक्तचाप (High BP) में नमक का सेवन कम रखें, तली-भुनी चीजों से बचें, और नियमित व्यायाम करें। नियमित रूप से बीपी मापें और डॉक्टर द्वारा निर्धारित बीपी की गोलियां समय पर लें।"
+            else:
+                return "Hypertension management involves limiting sodium intake to under 5g daily, regular aerobic activity, and avoiding excess stress. Monitor blood pressure frequently and adhere strictly to prescribed antihypertensive therapy."
+
+        # 5. Fever
+        if any(w in q_low for w in ["fever", "bukhar", "temperature", "tapmaan"]):
+            if is_hindi:
+                return "बुखार आमतौर पर किसी संक्रमण के खिलाफ शरीर की स्वाभाविक प्रतिक्रिया है। पर्याप्त पानी और तरल पदार्थ पिएं, आराम करें और तापमान मापते रहें। यदि बुखार 102°F से अधिक रहता है या 3 दिनों से ज्यादा रहता है, तो कृपया तुरंत डॉक्टर से संपर्क करें।"
+            else:
+                return "Fever is typically your body's immune response to an infection. Stay well hydrated, rest adequately, and monitor your temperature. If fever exceeds 102°F (38.9°C) or lasts more than 3 days, please consult a physician promptly."
+
+        # 6. Headache
+        if any(w in q_low for w in ["headache", "sirdard", "sir dard", "migraine"]):
+            if is_hindi:
+                return "सिरदर्द अक्सर थकान, तनाव, निर्जलीकरण या नींद की कमी के कारण होता है। शांत कमरे में आराम करें, पानी पिएं और स्क्रीन से ब्रेक लें। यदि सिरदर्द अचानक और बहुत तीव्र हो, तो तुरंत चिकित्सक से परामर्श लें।"
+            else:
+                return "Headaches are often caused by stress, dehydration, lack of sleep, or eye strain. Drink plenty of water and rest in a quiet, dimly lit room. Seek immediate medical attention if the headache is sudden and unusually severe."
+
+        # 7. Cough / Cold
+        if any(w in q_low for w in ["cough", "khansi", "cold", "sardi", "jukham"]):
+            if is_hindi:
+                return "हल्की सर्दी-खांसी में गर्म पानी का सेवन, भाप लेना और गर्म तरल पदार्थ गले को आराम देते हैं। यदि सांस लेने में कठिनाई हो या खांसी 2 सप्ताह से अधिक रहे, तो डॉक्टर को दिखाएं।"
+            else:
+                return "For mild colds and coughs, warm fluids and steam inhalation can help soothe airways. If you experience difficulty breathing, high fever, or the cough persists beyond two weeks, please see a doctor."
+
+        # 8. Stomach / Digestion / Acidity
+        if any(w in q_low for w in ["stomach", "pet", "dard", "gas", "acidity", "vomiting", "ulti", "nausea"]):
+            if is_hindi:
+                return "पेट दर्द, गैस या उल्टी में सुपाच्य और हल्का भोजन (जैसे दलिया, खिचड़ी) लें और ओआरएस पिएं ताकि कमजोरी न आए। यदि दर्द बहुत तीव्र हो या बार-बार उल्टी हो, तो तुरंत डॉक्टर को दिखाएं।"
+            else:
+                return "For stomach pain, indigestion, or nausea, sip oral rehydration fluids and eat small, bland meals. Seek clinical evaluation if abdominal pain is acute or accompanied by persistent vomiting."
+
+        # 9. General safe advice
+        if is_hindi:
+            return "आपके स्वास्थ्य की देखभाल के लिए पर्याप्त विश्राम, भरपूर पानी और संतुलित आहार आवश्यक है। यदि आपके लक्षण बने रहते हैं या बढ़ रहे हैं, तो कृपया व्यक्तिगत जांच के लिए डॉक्टर से अवश्य सलाह लें।"
+        else:
+            return "To support your recovery, ensure you get sufficient rest and stay properly hydrated. If your symptoms are persistent or worsening, please consult a qualified healthcare professional for a personalized clinical evaluation."
 
 
 # Global singleton instance

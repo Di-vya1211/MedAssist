@@ -816,6 +816,11 @@ def main():
     st.session_state.patient_profile = patient
     patient_name = patient.get("full_name") or st.session_state.get("patient_name") or "Patient"
 
+    # Synchronize language preference with patient registration profile
+    if "language" not in st.session_state:
+        pref = (patient.get("language_preference") or "English").lower()
+        st.session_state.language = "hi" if "hindi" in pref else "en"
+
     # Fetch recorded allergies for cross-module active safeguards
     patient_allergies = db.get_allergies(patient_id)
     critical_allergies = [a for a in patient_allergies if a.get("severity") == "Severe"]
@@ -852,6 +857,8 @@ def main():
         )
         if selected_lang[1] != st.session_state.language:
             st.session_state.language = selected_lang[1]
+            if "floating_bot_history" in st.session_state:
+                del st.session_state.floating_bot_history
             st.rerun()
 
     with top_col_bot:
@@ -939,17 +946,19 @@ def main():
         for i, ex in enumerate(disease_examples):
             with ex_cols[i]:
                 if st.button(ex, key=f"dis_ex_{ex}", use_container_width=True):
+                    st.session_state.disease_text_field = ex
                     st.session_state.disease_input = ex
                     st.session_state._trigger_disease = True
                     st.rerun()
 
         # Handle Search Execution
         should_search_disease = disease_search_clicked or st.session_state.get("_trigger_disease", False)
-        if should_search_disease and disease_name and disease_name.strip():
+        effective_disease = (disease_name or st.session_state.get("disease_input", "")).strip()
+        if should_search_disease and effective_disease:
             if "_trigger_disease" in st.session_state:
                 del st.session_state._trigger_disease
 
-            if detect_emergency(disease_name):
+            if detect_emergency(effective_disease):
                 st.error("🚨 EMERGENCY KEYWORDS DETECTED: If experiencing severe symptoms, call 108 immediately!")
 
             if not DISEASE_MODULE_OK:
@@ -959,9 +968,9 @@ def main():
                     st.session_state.disease_retriever = DiseaseInfoRetriever(top_k=5)
                 retriever = st.session_state.disease_retriever
 
-                with st.spinner(f"🔍 Searching clinical records for **{disease_name}**..."):
+                with st.spinner(f"🔍 Searching clinical records for **{effective_disease}**..."):
                     try:
-                        info = retriever.get_structured_info(disease_name.strip())
+                        info = retriever.get_structured_info(effective_disease)
                         result = format_disease_info(info)
                         st.session_state.disease_result = result
                         if "selected_medical_test" in st.session_state:
@@ -1181,6 +1190,7 @@ def main():
         for idx, ex in enumerate(drug_examples):
             with dex_cols[idx]:
                 if st.button(ex, key=f"dex_{idx}", use_container_width=True):
+                    st.session_state.drug_text_input = ex
                     st.session_state.drug_search = ex
                     st.session_state._trigger_drug = True
                     st.rerun()
@@ -1190,8 +1200,9 @@ def main():
             drug_search_btn = st.button("🔍 Search Drug", key="drug_search_action_btn", use_container_width=True, type="primary")
 
         should_search_drug = drug_search_btn or st.session_state.get("_trigger_drug", False)
+        effective_drug_query = (drug_query or st.session_state.get("drug_search", "")).strip()
 
-        if should_search_drug and drug_query and drug_query.strip():
+        if should_search_drug and effective_drug_query:
             if "_trigger_drug" in st.session_state:
                 del st.session_state._trigger_drug
 
@@ -1201,7 +1212,7 @@ def main():
                 # Check if drug_query reports an adverse reaction or allergy
                 try:
                     is_allg, allg_data = conversational_assistant.check_and_record_allergy_from_text(
-                        drug_query, patient_id=patient_id, patient_db=db
+                        effective_drug_query, patient_id=patient_id, patient_db=db
                     )
                     if is_allg and allg_data:
                         st.markdown(f"""
@@ -1220,10 +1231,10 @@ def main():
                 drug_agent = DrugInfoAgent()
                 st.session_state.drug_agent = drug_agent
 
-                with st.spinner(f"Analyzing drug database for '{drug_query}'..."):
+                with st.spinner(f"Analyzing drug database for '{effective_drug_query}'..."):
                     try:
                         # Pass updated patient allergies into drug agent!
-                        drug_res = drug_agent.answer(drug_query, patient_allergies=patient_allergies)
+                        drug_res = drug_agent.answer(effective_drug_query, patient_allergies=patient_allergies)
                         st.session_state.drug_results = drug_res
                     except Exception as e:
                         st.error(f"Error fetching drug info: {e}")
@@ -1231,19 +1242,20 @@ def main():
         # Display Drug Result
         if st.session_state.get("drug_results"):
             res = st.session_state.drug_results
-            is_query_a_question = is_question_query(drug_query)
-            candidate_drugs = extract_candidate_drugs(res, drug_query) if is_query_a_question else []
+            active_drug_str = (drug_query or st.session_state.get("drug_search", "")).strip()
+            is_query_a_question = is_question_query(active_drug_str)
+            candidate_drugs = extract_candidate_drugs(res, active_drug_str) if is_query_a_question else []
 
             # Allergy Cross-Checking:
             if not is_query_a_question:
                 # Specific drug searched (e.g. "Paracetamol", "Aspirin")
-                is_allg, allg_data = db.check_drug_allergy(patient_id, drug_query)
+                is_allg, allg_data = db.check_drug_allergy(patient_id, active_drug_str)
                 if is_allg and allg_data:
                     sev = allg_data.get("severity", "Moderate")
                     sym = allg_data.get("symptoms", "Adverse reaction")
                     st.markdown(f"""
                     <div class="critical-card" style="margin-top: 16px;">
-                        <h3 style="color:#ef4444 !important; margin:0 0 6px 0;">🚨 CRITICAL ALLERGY ALERT FOR {drug_query.upper()}</h3>
+                        <h3 style="color:#ef4444 !important; margin:0 0 6px 0;">🚨 CRITICAL ALLERGY ALERT FOR {active_drug_str.upper()}</h3>
                         <p style="color:#ffffff; font-size:1.05rem; margin:0 0 6px 0; font-weight:600;">
                             {patient_name}, you have a documented <u>{sev.upper()}</u> allergy/adverse reaction to this medication!
                         </p>
@@ -1418,19 +1430,44 @@ def main():
 
         uploaded_report = st.file_uploader("Upload Medical Report (PDF, JPG, PNG, WEBP)", type=["pdf", "png", "jpg", "jpeg", "webp"])
 
+        # Quick Sample Reports
+        st.markdown("<p style='color:#64748b; font-size:0.85rem; margin-top:6px;'>Or test instantly with verified sample reports:</p>", unsafe_allow_html=True)
+        r_cols = st.columns(3)
+        sample_reports_data = [
+            ("📋 Sample CBC Report", "cbc", "COMPLETE BLOOD COUNT (CBC) REPORT\nPatient: Ramesh Kumar, Age: 42, Gender: Male\nTest Date: 10-Oct-2026\n\nTEST PARAMETERS:\n- Hemoglobin: 10.2 g/dL (Normal: 13.0 - 17.0 g/dL) [LOW - Mild Anemia]\n- Total Leukocyte Count (WBC): 12,500 /mcL (Normal: 4,000 - 11,000 /mcL) [HIGH - Mild Infection]\n- Platelet Count: 180,000 /mcL (Normal: 150,000 - 450,000 /mcL) [Normal]\n- Hematocrit (PCV): 32.1 % (Normal: 40 - 50 %) [LOW]\n- ESR: 28 mm/hr (Normal: 0 - 15 mm/hr) [HIGH - Inflammation]\n\nImpression: Mild microcytic hypochromic anemia with mild leukocytosis. Clinical correlation advised."),
+            ("📋 Sample Diabetes & Lipid Panel", "lipid", "METABOLIC & LIPID PROFILE REPORT\nPatient: Sunita Devi, Age: 55, Gender: Female\nTest Date: 10-Oct-2026\n\nTEST PARAMETERS:\n- Fasting Blood Sugar (FBS): 168 mg/dL (Normal: 70 - 100 mg/dL) [HIGH - Diabetic Range]\n- HbA1c: 8.4 % (Normal: < 5.7 %, Diabetic: >= 6.5 %) [HIGH]\n- Total Cholesterol: 245 mg/dL (Normal: < 200 mg/dL) [HIGH]\n- LDL Cholesterol: 162 mg/dL (Normal: < 100 mg/dL) [HIGH - Plaque Risk]\n- HDL Cholesterol: 38 mg/dL (Normal: > 50 mg/dL) [LOW]\n- Triglycerides: 220 mg/dL (Normal: < 150 mg/dL) [HIGH]\n\nImpression: Uncontrolled Type 2 Diabetes Mellitus with mixed dyslipidemia. Lifestyle modification and physician review required."),
+            ("📋 Sample Renal & Liver Panel", "renal", "RENAL & LIVER FUNCTION REPORT\nPatient: Amit Verma, Age: 48, Gender: Male\nTest Date: 10-Oct-2026\n\nTEST PARAMETERS:\n- Serum Creatinine: 1.8 mg/dL (Normal: 0.7 - 1.3 mg/dL) [HIGH - Impaired Clearance]\n- Blood Urea Nitrogen (BUN): 28 mg/dL (Normal: 7 - 20 mg/dL) [HIGH]\n- Total Bilirubin: 0.9 mg/dL (Normal: 0.2 - 1.2 mg/dL) [Normal]\n- SGPT (ALT): 68 U/L (Normal: < 45 U/L) [MILD ELEVATION]\n- SGOT (AST): 54 U/L (Normal: < 40 U/L) [MILD ELEVATION]\n- Serum Uric Acid: 7.8 mg/dL (Normal: 3.5 - 7.2 mg/dL) [HIGH]\n\nImpression: Mild elevation in renal parameters (Creatinine/BUN) and transaminases. Nephrology/Physician follow-up recommended. Avoid nephrotoxic NSAIDs.")
+        ]
+        for idx, (label, key_suffix, r_text) in enumerate(sample_reports_data):
+            with r_cols[idx]:
+                if st.button(label, key=f"sample_rep_btn_{key_suffix}", use_container_width=True):
+                    st.session_state.active_report_text = r_text
+                    st.session_state.active_report_name = label
+                    st.rerun()
+
+        raw_report_text = None
+        temp_path = None
+
         if uploaded_report is not None:
             temp_path = os.path.join(BASE_DIR, f"temp_{uploaded_report.name}")
             with open(temp_path, "wb") as f:
                 f.write(uploaded_report.getbuffer())
+            try:
+                from reports.report_analyzer import extract_from_pdf, extract_from_image
+                if uploaded_report.name.lower().endswith(".pdf"):
+                    raw_report_text = extract_from_pdf(temp_path)
+                else:
+                    raw_report_text = extract_from_image(temp_path)
+            except Exception as ex:
+                raw_report_text = f"Extraction error: {ex}"
+        elif st.session_state.get("active_report_text"):
+            raw_report_text = st.session_state.active_report_text
+            st.info(f"Showing analysis for: **{st.session_state.get('active_report_name', 'Sample Medical Report')}**")
 
+        if raw_report_text:
             with st.spinner("📖 Extracting text and analyzing report..."):
                 try:
-                    from reports.report_analyzer import extract_from_pdf, extract_from_image, get_structured_analysis
-
-                    if uploaded_report.name.lower().endswith(".pdf"):
-                        raw_report_text = extract_from_pdf(temp_path)
-                    else:
-                        raw_report_text = extract_from_image(temp_path)
+                    from reports.report_analyzer import get_structured_analysis
 
                     if raw_report_text.startswith("PDF extraction error") or raw_report_text.startswith("OCR error"):
                         st.error(raw_report_text)
@@ -1594,7 +1631,7 @@ def main():
                     st.error(f"Error analyzing report: {e}")
                     st.code(traceback.format_exc())
                 finally:
-                    if os.path.exists(temp_path):
+                    if temp_path and os.path.exists(temp_path):
                         os.remove(temp_path)
 
     # ========================== TAB 5: SYMPTOM CHECKER ==========================
@@ -1619,14 +1656,22 @@ def main():
         )
         st.session_state.symptom_input = symp_text
 
-        # Quick Add Pills
-        st.markdown("<p style='color:#64748b; font-size:0.85rem;'>Quick add symptoms:</p>", unsafe_allow_html=True)
+        # Quick Add Pills / Examples
+        st.markdown("<p style='color:#64748b; font-size:0.85rem;'>Quick examples (Click to analyze):</p>", unsafe_allow_html=True)
         q_cols = st.columns(5)
-        for idx, sym in enumerate(["Fever", "Cough", "Headache", "Vomiting", "Stomach Pain"]):
+        sample_symptom_combos = [
+            ("Fever & Cough", "fever, cough, body ache"),
+            ("Headache", "severe headache, nausea"),
+            ("Stomach Pain", "stomach pain, vomiting"),
+            ("Breathing Issue", "shortness of breath, chest tightness"),
+            ("Joint Pain", "joint pain, morning stiffness")
+        ]
+        for idx, (label, s_text) in enumerate(sample_symptom_combos):
             with q_cols[idx]:
-                if st.button(sym, key=f"qsym_{idx}", use_container_width=True):
-                    current = st.session_state.get("symptom_input", "")
-                    st.session_state.symptom_input = f"{current}, {sym}".strip(", ")
+                if st.button(label, key=f"qsym_{idx}", use_container_width=True):
+                    st.session_state.symp_area = s_text
+                    st.session_state.symptom_input = s_text
+                    st.session_state._trigger_symptoms = True
                     st.rerun()
 
         col_chk_btn, _ = st.columns([1, 4])
@@ -1634,8 +1679,9 @@ def main():
             check_symp_btn = st.button("🔍 Check Symptoms", key="chk_symp_action_btn", use_container_width=True, type="primary")
 
         should_check_symptoms = check_symp_btn or st.session_state.get("_trigger_symptoms", False)
+        effective_symp_text = (symp_text or st.session_state.get("symptom_input", "")).strip()
 
-        if should_check_symptoms and symp_text and symp_text.strip():
+        if should_check_symptoms and effective_symp_text:
             if "_trigger_symptoms" in st.session_state:
                 del st.session_state._trigger_symptoms
 
@@ -1645,7 +1691,7 @@ def main():
                         from agents.symptom_checker_agent import SymptomCheckerAgent
                         st.session_state.symptom_checker = SymptomCheckerAgent()
 
-                    res_sym = st.session_state.symptom_checker.predict(symp_text, language=st.session_state.language)
+                    res_sym = st.session_state.symptom_checker.predict(effective_symp_text, language=st.session_state.language)
 
                     if res_sym["type"] == "emergency":
                         st.error(res_sym["message"])

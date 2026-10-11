@@ -21,9 +21,9 @@ HINGLISH_KEYWORDS = {
     "pet", "ulti", "chakkar", "kamzori", "thakan", "goli", "khana", "pani",
     "peena", "mujhe", "mera", "meri", "mere", "humko", "apna", "apni", "hai",
     "hain", "hoon", "hu", "kya", "kaise", "kare", "karein", "batao", "bataye",
-    "chahiye", "lena", "lene", "khaye", "khana", "ho", "raha", "rahi", "rahe",
-    "tha", "thi", "the", "nahi", "nahin", "doctor", "bimari", "ilaj", "allergy",
-    "kharab", "khujli", "chakkte", "jalan", "sujan", "vomiting", "fever"
+    "chahiye", "lena", "lene", "khaye", "ho", "raha", "rahi", "rahe",
+    "tha", "thi", "the", "nahi", "nahin", "bimari", "ilaj",
+    "kharab", "khujli", "chakkte", "jalan", "sujan"
 }
 
 class VoiceService:
@@ -60,7 +60,15 @@ class VoiceService:
         if re.search(r'[\u0C00-\u0C7F]', text):
             return "te"  # Telugu
 
-        # 3. Check for Whisper hint
+        # 3. Check for Whisper or explicit UI hint
+        if hinted_lang in ["en", "english"]:
+            # If user has English active, only override if strong Devanagari or multiple distinct Hinglish words
+            words = re.findall(r'[a-zA-Z]+', text.lower())
+            hinglish_count = sum(1 for w in words if w in HINGLISH_KEYWORDS)
+            if hinglish_count >= 3:
+                return "hi"
+            return "en"
+
         if hinted_lang in ["hi", "hindi"]:
             return "hi"
 
@@ -135,23 +143,46 @@ class VoiceService:
 
         return False, "", "en"
 
-    def record_live_microphone(self, timeout: int = 6, phrase_time_limit: int = 8) -> Tuple[bool, str, str]:
+    def record_live_microphone(self, timeout: int = 5, phrase_time_limit: int = 7) -> Tuple[bool, str, str]:
         """
-        Records from local PC microphone using speech_recognition.
+        Records from PC microphone using speech_recognition with multi-device discovery.
         Returns: (success, transcribed_text, detected_lang_code)
         """
         try:
             import speech_recognition as sr
             recognizer = sr.Recognizer()
-            with sr.Microphone() as source:
-                recognizer.adjust_for_ambient_noise(source, duration=0.6)
-                audio_data = recognizer.listen(source, timeout=timeout, phrase_time_limit=phrase_time_limit)
+            recognizer.energy_threshold = 300
+            recognizer.dynamic_energy_threshold = True
+
+            audio_data = None
+            mic_indices = [None]
+            try:
+                names = sr.Microphone.list_microphone_names()
+                for idx, n in enumerate(names):
+                    nl = n.lower()
+                    if ("realtek" in nl or "microphone array" in nl or "mic in" in nl or "built-in" in nl) and "hands-free" not in nl:
+                        mic_indices.append(idx)
+            except Exception:
+                pass
+
+            for dev_idx in mic_indices:
+                try:
+                    with sr.Microphone(device_index=dev_idx) as source:
+                        recognizer.adjust_for_ambient_noise(source, duration=0.3)
+                        audio_data = recognizer.listen(source, timeout=timeout, phrase_time_limit=phrase_time_limit)
+                    if audio_data:
+                        break
+                except Exception:
+                    continue
+
+            if not audio_data:
+                return False, "", "en"
 
             # Try transcribe with Groq whisper first if audio wav is exportable
             try:
                 wav_bytes = audio_data.get_wav_data()
                 success, text, lang = self.transcribe_audio_bytes(wav_bytes, "mic.wav")
-                if success:
+                if success and text:
                     return True, text, lang
             except Exception:
                 pass
@@ -159,15 +190,23 @@ class VoiceService:
             # Fallback to Google SR
             try:
                 text = recognizer.recognize_google(audio_data, language="hi-IN")
-                return True, text, "hi"
+                if text:
+                    return True, text, "hi"
             except Exception:
+                pass
+
+            try:
                 text = recognizer.recognize_google(audio_data, language="en-IN")
-                lang = self.detect_language(text)
-                return True, text, lang
+                if text:
+                    lang = self.detect_language(text)
+                    return True, text, lang
+            except Exception:
+                pass
 
         except Exception as e:
             print(f"[VoiceService] Live mic error: {e}")
-            return False, "", "en"
+
+        return False, "", "en"
 
     def text_to_speech_bytes(self, text: str, lang_code: str = "en") -> Optional[bytes]:
         """
