@@ -20,32 +20,68 @@ def init_auth_session():
         st.session_state.auth_page = "login"
 
 
-from core.theme import apply_theme_css, render_theme_switcher, render_initiative_header, render_hero_section, render_interactive_overview_cards, get_theme_palette
-
 def show_login_page(db: PatientDatabase):
-    """Display login page with RakshaPath-inspired modern UI and 3-mode theme system"""
-    apply_theme_css()
-    theme = get_theme_palette()
-    
-    # Top initiative banner
-    render_initiative_header()
-    
-    # Top control bar with theme switcher
-    top_c1, top_c2 = st.columns([3, 2])
-    with top_c1:
-        st.markdown(f"<p style='margin:0; font-size:0.85rem; font-weight:600; color:{theme['primary_accent']};'>🎨 Theme Mode (VS Code Style):</p>", unsafe_allow_html=True)
-    with top_c2:
-        render_theme_switcher()
-        
-    st.markdown("<hr style='border-color: rgba(255,255,255,0.08); margin: 10px 0 16px 0;'>", unsafe_allow_html=True)
-
-    # Hero section with platform badges
-    render_hero_section()
-    
-    # Interactive dual role cards from RakshaPath reference design
-    render_interactive_overview_cards()
-    
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+    """Display login page"""
+    st.markdown("""
+    <style>
+    /* High contrast dark buttons */
+    .stButton > button {
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease !important;
+        padding: 8px 18px !important;
+        background: #1e293b !important;
+        color: #f8fafc !important;
+        border: 1px solid rgba(56, 189, 248, 0.3) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+    }
+    .stButton > button:hover {
+        background: #334155 !important;
+        color: #38bdf8 !important;
+        border-color: #38bdf8 !important;
+        box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25) !important;
+    }
+    .stButton > button p, 
+    .stButton > button span, 
+    .stButton > button div {
+        color: inherit !important;
+        font-weight: 600 !important;
+    }
+    .stButton > button[kind="primary"],
+    .stButton > button[data-testid="stBaseButton-primary"] {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #38bdf8 !important;
+        box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35) !important;
+    }
+    .stButton > button[kind="primary"] p,
+    .stButton > button[kind="primary"] span,
+    .stButton > button[kind="primary"] div {
+        color: #ffffff !important;
+    }
+    .stButton > button[kind="secondary"],
+    .stButton > button[data-testid="stBaseButton-secondary"] {
+        background: #1e293b !important;
+        color: #f1f5f9 !important;
+        border: 1px solid rgba(56, 189, 248, 0.3) !important;
+    }
+    .stButton > button[kind="secondary"]:hover,
+    .stButton > button[data-testid="stBaseButton-secondary"]:hover {
+        background: #334155 !important;
+        color: #38bdf8 !important;
+        border-color: #38bdf8 !important;
+    }
+    .stButton > button[kind="secondary"] p,
+    .stButton > button[kind="secondary"] span,
+    .stButton > button[kind="secondary"] div {
+        color: #f1f5f9 !important;
+    }
+    </style>
+    <div style='text-align: center; padding: 20px;'>
+        <h1>🏥 MedAssist</h1>
+        <h3>Rural Health Companion</h3>
+    </div>
+    """, unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     
@@ -111,19 +147,55 @@ def show_login_page(db: PatientDatabase):
 
 
 def show_registration_page(db: PatientDatabase):
-    """Display registration page with theme system and initiative styling"""
-    apply_theme_css()
-    theme = get_theme_palette()
-    
-    render_initiative_header()
-    
-    top_c1, top_c2 = st.columns([3, 2])
-    with top_c1:
-        st.markdown(f"<p style='margin:0; font-size:0.85rem; font-weight:600; color:{theme['primary_accent']};'>🎨 Theme Mode (VS Code Style):</p>", unsafe_allow_html=True)
-    with top_c2:
-        render_theme_switcher()
-        
-    st.markdown("<hr style='border-color: rgba(255,255,255,0.08); margin: 10px 0 16px 0;'>", unsafe_allow_html=True)
+    """Display registration page"""
+    st.markdown("""
+    <style>
+    /* High contrast dark buttons */
+    .stButton > button {
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease !important;
+        padding: 8px 18px !important;
+        background: #1e293b !important;
+        color: #f8fafc !important;
+        border: 1px solid rgba(56, 189, 248, 0.3) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+    }
+    .stButton > button:hover {
+        background: #334155 !important;
+        color: #38bdf8 !important;
+        border-color: #38bdf8 !important;
+        box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25) !important;
+    }
+    .stButton > button p, 
+    .stButton > button span, 
+    .stButton > button div {
+        color: inherit !important;
+        font-weight: 600 !important;
+    }
+    .stButton > button[kind="primary"],
+    .stButton > button[data-testid="stBaseButton-primary"] {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #38bdf8 !important;
+    }
+    .stButton > button[kind="secondary"],
+    .stButton > button[data-testid="stBaseButton-secondary"] {
+        background: #1e293b !important;
+        color: #f1f5f9 !important;
+        border: 1px solid rgba(56, 189, 248, 0.3) !important;
+    }
+    .stButton > button[kind="secondary"] p,
+    .stButton > button[kind="secondary"] span,
+    .stButton > button[kind="secondary"] div {
+        color: #f1f5f9 !important;
+    }
+    </style>
+    <div style='text-align: center; padding: 20px;'>
+        <h1>🏥 MedAssist</h1>
+        <h3>Patient Registration</h3>
+    </div>
+    """, unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     
