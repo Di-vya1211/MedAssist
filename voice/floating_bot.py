@@ -48,7 +48,7 @@ def init_floating_bot_state():
         ]
 
 
-@st.dialog("🤖 MedAssist AI Companion", width="medium")
+@st.dialog("🤖 MedAssist AI Companion", width="small")
 def open_medassist_bot_dialog(patient_id: Optional[int] = None, patient_db = None):
     """
     Interactive clinical dialogue modal where the 3D robot greets the patient
@@ -60,11 +60,11 @@ def open_medassist_bot_dialog(patient_id: Optional[int] = None, patient_db = Non
 
     # Header Card with the 3D Robot Image
     st.markdown(f"""
-    <div style='display: flex; align-items: center; gap: 14px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 14px; padding: 12px 16px; margin-bottom: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.3);'>
-        <img src='data:image/png;base64,{b64}' style='width: 56px; height: 56px; border-radius: 50%; border: 2.5px solid #38bdf8; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.5); object-fit: cover; background: #0b0f19;' />
+    <div style='display: flex; align-items: center; gap: 12px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 14px; padding: 10px 14px; margin-bottom: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.3);'>
+        <img src='data:image/png;base64,{b64}' style='width: 48px; height: 48px; border-radius: 50%; border: 2px solid #38bdf8; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.5); object-fit: cover; background: #0b0f19;' />
         <div>
-            <h3 style='margin: 0; color: #f8fafc; font-size: 1.25rem; font-weight: 700;'>MedAssist AI Assistant</h3>
-            <p style='margin: 2px 0 0 0; color: #10b981; font-size: 0.82rem; font-weight: 600;'>🟢 Online • How may I help you today?</p>
+            <h3 style='margin: 0; color: #f8fafc; font-size: 1.15rem; font-weight: 700;'>MedAssist AI Companion</h3>
+            <p style='margin: 2px 0 0 0; color: #10b981; font-size: 0.8rem; font-weight: 600;'>🟢 Online • Ready to help</p>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -79,13 +79,13 @@ def open_medassist_bot_dialog(patient_id: Optional[int] = None, patient_db = Non
     if allergies:
         crit_str = ", ".join([a.get("medicine_name", "") for a in allergies[:3] if a.get("medicine_name")])
         st.markdown(f"""
-        <div style='background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 8px; padding: 6px 12px; margin-bottom: 12px; font-size: 0.8rem; color: #fca5a5;'>
+        <div style='background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 8px; padding: 6px 12px; margin-bottom: 10px; font-size: 0.78rem; color: #fca5a5;'>
             🛡️ <b>Active Allergy Guard:</b> Protecting you against {crit_str}
         </div>
         """, unsafe_allow_html=True)
 
     # Scrollable Chat History Container
-    st.markdown("<div style='max-height: 330px; overflow-y: auto; padding-right: 4px; margin-bottom: 10px;'>", unsafe_allow_html=True)
+    st.markdown("<div style='max-height: 250px; min-height: 140px; overflow-y: auto; padding-right: 4px; margin-bottom: 8px;'>", unsafe_allow_html=True)
     for msg in st.session_state.floating_bot_history:
         role = msg.get("role", "assistant")
         content = msg.get("content", "")
@@ -103,15 +103,15 @@ def open_medassist_bot_dialog(patient_id: Optional[int] = None, patient_db = Non
 
     # Quick Suggestion Chips (Available for instant 1-click answers)
     if len(st.session_state.floating_bot_history) <= 3:
-        st.markdown("<p style='color: #94a3b8; font-size: 0.78rem; margin: 4px 0 6px 0;'>Quick suggestions:</p>", unsafe_allow_html=True)
+        st.markdown("<p style='color: #94a3b8; font-size: 0.76rem; margin: 2px 0 6px 0; font-weight: 600;'>💡 Quick questions:</p>", unsafe_allow_html=True)
         chips = [
-            ("🤒 Cold & Fever", "What medicines and remedies help with common cold and fever?"),
+            ("🤒 Cold/Fever", "What medicines and remedies help with common cold and fever?"),
             ("💊 Paracetamol", "Is Paracetamol safe and what is the typical dosage?"),
-            ("🛡️ My Allergies", "What drug allergies do I have recorded in my profile?")
+            ("🛡️ Allergies", "What drug allergies do I have recorded in my profile?")
         ] if not is_hindi else [
             ("🤒 सर्दी-बुखार", "सर्दी और बुखार में क्या उपाय और दवाएं सुरक्षित हैं?"),
             ("💊 पैरासिटामोल", "पैरासिटामोल की सही खुराक और सावधानियां क्या हैं?"),
-            ("🛡️ मेरी एलर्जी", "मेरी प्रोफाइल में कौन-कौन सी दवा एलर्जी दर्ज है?")
+            ("🛡️ एलर्जी", "मेरी प्रोफाइल में कौन-कौन सी दवा एलर्जी दर्ज है?")
         ]
         q_cols = st.columns(3)
         for i, (label, query_text) in enumerate(chips):
@@ -198,7 +198,7 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
     is_hindi = st.session_state.get("language", "en") == "hi"
     speech_text = "How may I help you? 👋" if not is_hindi else "मैं आपकी क्या सहायता करूँ? 👋"
 
-    # Floating CSS for both the 3D robot visual and the invisible native button layer
+    # Floating CSS for both the 3D robot visual, invisible native button layer, and side card dialog
     st.html(f"""
     <style>
     /* Fixed Floating Bot Widget (Bottom-Right Corner) */
@@ -241,6 +241,12 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
         border-right: 1.5px solid #38bdf8;
         border-bottom: 1.5px solid #38bdf8;
         transform: rotate(45deg);
+    }}
+
+    /* Hide speech bubble when chat dialog card is open so they don't overlap */
+    body:has(div[data-testid="stDialog"]) .bot-speech-bubble,
+    body:has(div[role="dialog"]) .bot-speech-bubble {{
+        display: none !important;
     }}
 
     /* 3D Robot Head Circular Visual */
@@ -314,6 +320,83 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
         background: transparent !important;
         padding: 0 !important;
         margin: 0 !important;
+    }}
+
+    /* ========================================================
+       FLOATING AI BOT DIALOG AS SIDE SQUARE CARD (BOTTOM-RIGHT)
+       ======================================================== */
+    /* Remove fullscreen dark backdrop dimming */
+    div[data-baseweb="modal"],
+    div[data-baseweb="modal"] > div {{
+        background-color: transparent !important;
+        background: transparent !important;
+    }}
+
+    /* Position dialog as a compact, floating square card in bottom-right corner */
+    div[data-testid="stDialog"],
+    div[role="dialog"] {{
+        position: fixed !important;
+        bottom: 105px !important;
+        right: 25px !important;
+        margin: 0 !important;
+        width: 420px !important;
+        max-width: calc(100vw - 35px) !important;
+        height: 560px !important;
+        max-height: calc(100vh - 125px) !important;
+        background-color: #0b1120 !important;
+        border: 2px solid rgba(56, 189, 248, 0.45) !important;
+        border-radius: 20px !important;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 25px rgba(56, 189, 248, 0.3) !important;
+        z-index: 99999999 !important;
+        overflow-y: auto !important;
+        padding: 1.2rem 1.3rem !important;
+        animation: botCardSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }}
+
+    @keyframes botCardSlideUp {{
+        from {{
+            opacity: 0;
+            transform: translateY(20px) scale(0.96);
+        }}
+        to {{
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }}
+    }}
+
+    div[data-testid="stDialog"] h2,
+    div[role="dialog"] h2 {{
+        font-size: 1.05rem !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        color: #f8fafc !important;
+        font-weight: 700 !important;
+    }}
+
+    div[data-testid="stDialog"] button[aria-label="Close"],
+    div[role="dialog"] button[aria-label="Close"] {{
+        color: #94a3b8 !important;
+        top: 14px !important;
+        right: 14px !important;
+        font-size: 1.2rem !important;
+        border-radius: 8px !important;
+        transition: all 0.2s ease !important;
+    }}
+    div[data-testid="stDialog"] button[aria-label="Close"]:hover,
+    div[role="dialog"] button[aria-label="Close"]:hover {{
+        color: #f43f5e !important;
+        background: rgba(244, 63, 94, 0.15) !important;
+        transform: scale(1.1) !important;
+    }}
+
+    div[data-testid="stDialog"]::-webkit-scrollbar,
+    div[role="dialog"]::-webkit-scrollbar {{
+        width: 6px !important;
+    }}
+    div[data-testid="stDialog"]::-webkit-scrollbar-thumb,
+    div[role="dialog"]::-webkit-scrollbar-thumb {{
+        background: rgba(56, 189, 248, 0.3) !important;
+        border-radius: 10px !important;
     }}
     </style>
 

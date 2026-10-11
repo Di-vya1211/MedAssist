@@ -413,13 +413,89 @@ st.markdown("""
     }
 
     /* ========================================================
-       MODAL DIALOG STYLING FOR MEDASSIST AI BOT
+       FLOATING AI BOT DIALOG AS SIDE SQUARE CARD (BOTTOM-RIGHT)
        ======================================================== */
-    div[data-testid="stDialog"], div[role="dialog"] {
+    /* 1. Remove fullscreen dark backdrop dimming so the entire dashboard stays bright & visible */
+    div[data-baseweb="modal"],
+    div[data-baseweb="modal"] > div {
+        background-color: transparent !important;
+        background: transparent !important;
+    }
+
+    /* 2. Position the dialog as a compact, floating card in the bottom-right corner */
+    div[data-testid="stDialog"],
+    div[role="dialog"] {
+        position: fixed !important;
+        bottom: 105px !important;
+        right: 25px !important;
+        margin: 0 !important;
+        width: 420px !important;
+        max-width: calc(100vw - 35px) !important;
+        height: 560px !important;
+        max-height: calc(100vh - 125px) !important;
         background-color: #0b1120 !important;
-        border: 1px solid rgba(56, 189, 248, 0.3) !important;
+        border: 2px solid rgba(56, 189, 248, 0.45) !important;
         border-radius: 20px !important;
-        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 25px rgba(2, 132, 199, 0.25) !important;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 25px rgba(56, 189, 248, 0.3) !important;
+        z-index: 99999999 !important;
+        overflow-y: auto !important;
+        padding: 1.2rem 1.3rem !important;
+        animation: botCardSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    @keyframes botCardSlideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px) scale(0.96);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    /* 3. Hide floating speech bubble when dialog is open so they do not overlap */
+    body:has(div[data-testid="stDialog"]) .bot-speech-bubble,
+    body:has(div[role="dialog"]) .bot-speech-bubble {
+        display: none !important;
+    }
+
+    /* 4. Compact dialog header & stylish close button */
+    div[data-testid="stDialog"] h2,
+    div[role="dialog"] h2 {
+        font-size: 1.05rem !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        color: #f8fafc !important;
+        font-weight: 700 !important;
+    }
+
+    div[data-testid="stDialog"] button[aria-label="Close"],
+    div[role="dialog"] button[aria-label="Close"] {
+        color: #94a3b8 !important;
+        top: 14px !important;
+        right: 14px !important;
+        font-size: 1.2rem !important;
+        border-radius: 8px !important;
+        transition: all 0.2s ease !important;
+    }
+
+    div[data-testid="stDialog"] button[aria-label="Close"]:hover,
+    div[role="dialog"] button[aria-label="Close"]:hover {
+        color: #f43f5e !important;
+        background: rgba(244, 63, 94, 0.15) !important;
+        transform: scale(1.1) !important;
+    }
+
+    /* 5. Custom scrollbar for the dialog card */
+    div[data-testid="stDialog"]::-webkit-scrollbar,
+    div[role="dialog"]::-webkit-scrollbar {
+        width: 6px !important;
+    }
+    div[data-testid="stDialog"]::-webkit-scrollbar-thumb,
+    div[role="dialog"]::-webkit-scrollbar-thumb {
+        background: rgba(56, 189, 248, 0.3) !important;
+        border-radius: 10px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1097,13 +1173,6 @@ def main():
     with tab_report:
         st.markdown("<h2 style='color:#f8fafc;'>📄 Medical Report Analyzer</h2>", unsafe_allow_html=True)
         st.markdown("<p style='color:#94a3b8;'>Upload your blood test, pathology, or discharge report (PDF or Image). We extract values, explain them simply in Hindi or English, and check for any medicine allergy conflicts.</p>", unsafe_allow_html=True)
-
-        # Voice input for report questions
-        render_voice_input_widget(
-            module_key="report",
-            target_state_key="report_voice_query",
-            help_text="Speak any question about your report in Hindi or English"
-        )
 
         uploaded_report = st.file_uploader("Upload Medical Report (PDF, JPG, PNG, WEBP)", type=["pdf", "png", "jpg", "jpeg", "webp"])
 
