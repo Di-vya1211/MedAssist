@@ -219,7 +219,9 @@ def fetch_medical_test_details(test_name: str, disease_name: str = "") -> dict:
             "description": matched_data.get("description", "A standard diagnostic test used in medical evaluation."),
             "why_done": matched_data.get("why_done", f"Performed to assess clinical status and diagnose conditions related to {disease_name or 'the patient\'s symptoms'}."),
             "how_you_prepare": matched_data.get("how_you_prepare", "Follow all specific clinic instructions. Fasting may be necessary for blood draws."),
-            "normal_values": matched_data.get("normal_values", "Results should be interpreted by your healthcare provider alongside clinical signs.")
+            "normal_values": matched_data.get("normal_values", "Results should be interpreted by your healthcare provider alongside clinical signs."),
+            "procedure": matched_data.get("what_happens") or matched_data.get("procedure") or "A certified phlebotomist or clinical specialist performs the sample collection or scan following clinical guidelines.",
+            "risks": matched_data.get("risks_complications") or matched_data.get("risks") or "Minimal risks: minor soreness, slight bruising, or temporary tenderness at the test site."
         }
 
     # 2. Check session cache
@@ -241,8 +243,10 @@ Return ONLY a valid JSON object with these exact keys:
   "name": "{clean_name.title()}",
   "description": "2-3 clear sentences describing what this test evaluates and measures.",
   "why_done": "Why physicians recommend this test and what abnormalities it identifies.",
+  "procedure": "Clear step-by-step description of what happens during the test procedure.",
   "how_you_prepare": "Patient preparation rules (e.g. fasting hours, water intake, medications to avoid, timing).",
-  "normal_values": "Typical reference values and clinical meaning of abnormal readings."
+  "normal_values": "Typical reference values and clinical meaning of abnormal readings.",
+  "risks": "Potential risks, side effects, or minor complications associated with this test."
 }}"""
         resp_text = llm.generate(prompt)
         match = re.search(r'\{.*\}', resp_text, re.DOTALL)
@@ -264,40 +268,50 @@ Return ONLY a valid JSON object with these exact keys:
             "name": clean_name.title(),
             "description": "The Oral Glucose Tolerance Test (OGTT) and glucose assays evaluate how efficiently your body clears sugar from the bloodstream after fasting and glucose ingestion. It assesses pancreatic beta-cell function and insulin sensitivity.",
             "why_done": f"Diagnoses Type 2 Diabetes, Prediabetes, and Gestational Diabetes, and monitors glycemic control in patients with {disease_name or 'metabolic disorders'}.",
+            "procedure": "A fasting blood sample is drawn first. You then drink a measured glucose drink (usually 75g in water), and blood samples are drawn at 1-hour and 2-hour intervals to track blood sugar levels.",
             "how_you_prepare": "Fast overnight for at least 8 to 12 hours prior to the test (water is permitted). Maintain normal carbohydrate intake for 3 days prior. Avoid strenuous exercise or smoking before the test.",
-            "normal_values": "Fasting: Under 100 mg/dL (Normal). 2 Hours post-glucose: Less than 140 mg/dL (Normal); 140 to 199 mg/dL indicates Prediabetes (Impaired Glucose Tolerance); 200 mg/dL or higher indicates Diabetes."
+            "normal_values": "Fasting: Under 100 mg/dL (Normal). 2 Hours post-glucose: Less than 140 mg/dL (Normal); 140 to 199 mg/dL indicates Prediabetes (Impaired Glucose Tolerance); 200 mg/dL or higher indicates Diabetes.",
+            "risks": "Very safe test: occasional mild nausea or stomach upset from the sweet drink, and slight bruising at the needle puncture site."
         }
     elif any(k in t_low for k in ["lipid", "cholesterol", "triglyceride", "ldl", "hdl"]):
         heuristic_data = {
             "name": clean_name.title(),
             "description": "A comprehensive lipid profile measures circulating blood fats including Total Cholesterol, High-Density Lipoprotein (HDL), Low-Density Lipoprotein (LDL), and Triglycerides.",
             "why_done": f"Evaluates cardiovascular risk, arterial plaque formation, and monitors response to statin therapy or dietary interventions for {disease_name or 'cardiac health'}.",
+            "procedure": "A phlebotomist applies an elastic tourniquet around your upper arm, swabs the area with alcohol, and collects a small blood sample from a vein into a vacuum vial.",
             "how_you_prepare": "Fast for 9 to 12 hours before the blood draw (water only). Avoid alcohol for 24 hours prior. Take regular morning medications unless instructed otherwise.",
-            "normal_values": "Total Cholesterol: < 200 mg/dL; LDL (Bad): < 100 mg/dL; HDL (Good): > 40 mg/dL (men), > 50 mg/dL (women); Triglycerides: < 150 mg/dL."
+            "normal_values": "Total Cholesterol: < 200 mg/dL; LDL (Bad): < 100 mg/dL; HDL (Good): > 40 mg/dL (men), > 50 mg/dL (women); Triglycerides: < 150 mg/dL.",
+            "risks": "Extremely minimal: slight pinch during needle insertion, minor localized bruising, or temporary faintness."
         }
     elif any(k in t_low for k in ["blood", "cbc", "hemoglobin", "tlc", "wbc", "platelet"]):
         heuristic_data = {
             "name": clean_name.title(),
             "description": "A Complete Blood Count (CBC) examines cellular components of the blood: red blood cells (erythrocytes), white blood cells (leukocytes), and platelets (thrombocytes).",
             "why_done": f"Screens for anemia, acute or chronic infections, systemic inflammation, bleeding disorders, and immune system status in connection with {disease_name or 'systemic illness'}.",
+            "procedure": "A standard venipuncture is performed on your inner arm using a small sterile needle to draw a small vial of blood for automated hematology analyzer assessment.",
             "how_you_prepare": "Usually requires no special fasting unless performed alongside a fasting metabolic or lipid panel. Drink adequate water beforehand.",
-            "normal_values": "Hemoglobin: 12.0-16.5 g/dL; WBC Count: 4,000-11,000 cells/mcL; Platelets: 150,000-450,000 cells/mcL; Hematocrit: 36%-50%."
+            "normal_values": "Hemoglobin: 12.0-16.5 g/dL; WBC Count: 4,000-11,000 cells/mcL; Platelets: 150,000-450,000 cells/mcL; Hematocrit: 36%-50%.",
+            "risks": "Virtually risk-free: brief stinging sensation and minor temporary bruising where the needle entered."
         }
     elif any(k in t_low for k in ["kidney", "renal", "creatinine", "bun", "urea", "gfr"]):
         heuristic_data = {
             "name": clean_name.title(),
             "description": "Renal function testing evaluates blood urea nitrogen (BUN), serum creatinine, and estimated glomerular filtration rate (eGFR) to assess kidney filtration efficacy.",
             "why_done": f"Detects acute or chronic kidney impairment, dehydration, and drug toxicity related to {disease_name or 'renal health'}.",
+            "procedure": "A healthcare worker draws a routine blood sample from your arm vein. In some cases, a 24-hour urine collection sample may also be requested.",
             "how_you_prepare": "Avoid eating large portions of cooked red meat for 24 hours prior, as it can temporarily elevate creatinine levels. Stay well hydrated.",
-            "normal_values": "Serum Creatinine: 0.7 to 1.3 mg/dL; Blood Urea Nitrogen (BUN): 7 to 20 mg/dL; eGFR: 90 mL/min/1.73m² or higher (Normal)."
+            "normal_values": "Serum Creatinine: 0.7 to 1.3 mg/dL; Blood Urea Nitrogen (BUN): 7 to 20 mg/dL; eGFR: 90 mL/min/1.73m² or higher (Normal).",
+            "risks": "Minimal: brief discomfort during blood collection and minor hematoma or soreness that fades within a day."
         }
     else:
         heuristic_data = {
             "name": clean_name.title(),
             "description": f"Standard clinical diagnostic procedure recommended to evaluate physiological status, detect abnormalities, and monitor response to treatment for {disease_name or 'the condition'}.",
             "why_done": f"Provides objective quantitative and qualitative clinical data to confirm diagnosis and optimize clinical care for {disease_name or 'the patient'}.",
+            "procedure": "Carried out by certified clinical technicians following standardized aseptic hospital protocols.",
             "how_you_prepare": "Follow all preparatory instructions given by your clinic. If blood work is involved, 8-hour fasting is frequently advisable unless instructed otherwise.",
-            "normal_values": "Clinical reference intervals vary by laboratory equipment and methodology. Your physician will review abnormal values in context of your overall health."
+            "normal_values": "Clinical reference intervals vary by laboratory equipment and methodology. Your physician will review abnormal values in context of your overall health.",
+            "risks": "Low risk under standard clinical care. Inform your physician if you have bleeding disorders or allergy to antiseptics."
         }
 
     st.session_state[cache_key] = heuristic_data
@@ -1003,7 +1017,7 @@ def main():
 
                 # Translate into Hindi if active language is 'hi'
                 if st.session_state.language == "hi" and TRANSLATION_OK:
-                    for field in ["name", "description", "why_done", "how_you_prepare", "normal_values"]:
+                    for field in ["name", "description", "why_done", "procedure", "how_you_prepare", "normal_values", "risks"]:
                         if test_data.get(field):
                             test_data[field] = translate_content(test_data[field], target_lang="hi")
 
@@ -1032,6 +1046,13 @@ def main():
                             <p style="margin:0; line-height:1.6;">{test_data.get('why_done')}</p>
                         </div>
                         """, unsafe_allow_html=True)
+                    if test_data.get('procedure'):
+                        st.markdown(f"""
+                        <div class="info-card" style="border-left-color: #06b6d4;">
+                            <h4 style="color:#06b6d4; margin:0 0 6px 0;">📋 Procedure / प्रक्रिया</h4>
+                            <p style="margin:0; line-height:1.6;">{test_data.get('procedure')}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
                 with td2:
                     if test_data.get('how_you_prepare'):
                         st.markdown(f"""
@@ -1047,9 +1068,16 @@ def main():
                             <p style="margin:0; line-height:1.6;">{test_data.get('normal_values')}</p>
                         </div>
                         """, unsafe_allow_html=True)
+                    if test_data.get('risks'):
+                        st.markdown(f"""
+                        <div class="info-card" style="border-left-color: #ef4444;">
+                            <h4 style="color:#ef4444; margin:0 0 6px 0;">🚨 Risks & Complications / जोखिम</h4>
+                            <p style="margin:0; line-height:1.6;">{test_data.get('risks')}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
 
                 # Test Read Aloud
-                test_speech = f"{disp_name}. {test_data.get('description', '')}. Preparation: {test_data.get('how_you_prepare', '')}. Normal range: {test_data.get('normal_values', '')}."
+                test_speech = f"{disp_name}. {test_data.get('description', '')}. Why done: {test_data.get('why_done', '')}. Procedure: {test_data.get('procedure', '')}. Preparation: {test_data.get('how_you_prepare', '')}. Normal range: {test_data.get('normal_values', '')}. Risks: {test_data.get('risks', '')}."
                 render_read_aloud_widget(
                     test_speech,
                     widget_key=f"test_{normalize_name(test_key)[:12]}",
@@ -1256,22 +1284,37 @@ def main():
                         """, unsafe_allow_html=True)
 
             ans_text = res.get("answer", "")
-            # Ensure clinical cards are ALWAYS present if text is empty or generic
-            if not ans_text or "Based on standard" in ans_text or len(ans_text) < 40:
+            # Ensure clinical cards are ALWAYS present and accurate
+            is_direct_lookup = (res.get("type") == "direct" or not is_question_query(drug_query))
+            if not ans_text or "Based on standard" in ans_text or len(ans_text) < 40 or "indicated for the treatment of " + drug_query.lower() in ans_text.lower():
                 candidate_cards = res.get("drugs", [])
                 if candidate_cards:
-                    lines = [f"The following medications are indicated for {drug_query}:\n"]
-                    for d in candidate_cards[:5]:
-                        d_name = d.get('name', 'Medication')
-                        d_ind = d.get('indications', f'Prescribed for {drug_query}')
-                        d_warn = d.get('warnings', 'Follow prescribed dosage. Consult doctor before taking.')
-                        lines.append(f"**{d_name.upper()}**")
-                        lines.append(f"What it's used for: {d_name} – {d_ind[:250]}")
-                        if d_warn:
-                            lines.append(f"Warnings: {d_warn[:200]}")
-                        lines.append("")
-                    lines.append("⚠️ For any personal decisions regarding medication, always consult with a doctor or pharmacist.")
-                    ans_text = "\n".join(lines)
+                    if is_direct_lookup:
+                        card = candidate_cards[0]
+                        c_name = card.get('name', drug_query)
+                        c_ind = card.get('indications', 'Prescribed medication for clinical symptom relief.')
+                        c_dose = card.get('dosage', 'Take as directed by doctor or package instructions.')
+                        c_warn = card.get('warnings', 'Follow prescribed dosage. Consult doctor before taking.')
+                        ans_text = (
+                            f"**{c_name.upper()}**\n\n"
+                            f"**What it's used for:** {c_ind}\n\n"
+                            f"**Dosage:** {c_dose}\n\n"
+                            f"**Warnings & Precautions:** {c_warn}\n\n"
+                            f"⚠️ For any personal decisions regarding medication, always consult with a doctor or pharmacist."
+                        )
+                    else:
+                        lines = [f"The following medications are indicated for {drug_query}:\n"]
+                        for d in candidate_cards[:5]:
+                            d_name = d.get('name', 'Medication')
+                            d_ind = d.get('indications', f'Prescribed for {drug_query}')
+                            d_warn = d.get('warnings', 'Follow prescribed dosage. Consult doctor before taking.')
+                            lines.append(f"**{d_name.upper()}**")
+                            lines.append(f"What it's used for: {d_name} – {d_ind[:250]}")
+                            if d_warn:
+                                lines.append(f"Warnings: {d_warn[:200]}")
+                            lines.append("")
+                        lines.append("⚠️ For any personal decisions regarding medication, always consult with a doctor or pharmacist.")
+                        ans_text = "\n".join(lines)
                 else:
                     ans_text = f"Consult your physician for prescription treatment regarding '{drug_query}'."
 

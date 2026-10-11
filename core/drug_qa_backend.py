@@ -9,6 +9,42 @@ import re
 from typing import List, Dict, Optional
 
 
+DRUG_SYNONYMS = {
+    "paracetamol": "acetaminophen",
+    "crocin": "acetaminophen",
+    "dolo": "acetaminophen",
+    "dolo 650": "acetaminophen",
+    "calpol": "acetaminophen",
+    "tylenol": "acetaminophen",
+    "panadol": "acetaminophen",
+    "aspirin": "acetylsalicylic acid",
+    "disprin": "aspirin",
+    "advil": "ibuprofen",
+    "motrin": "ibuprofen",
+    "brufen": "ibuprofen",
+    "combiflam": "ibuprofen",
+    "augmentin": "amoxicillin",
+    "mox": "amoxicillin",
+    "amoxil": "amoxicillin",
+    "glucophage": "metformin",
+    "glycomet": "metformin",
+    "norvasc": "amlodipine",
+    "amlong": "amlodipine",
+    "lipitor": "atorvastatin",
+    "atorva": "atorvastatin",
+    "omez": "omeprazole",
+    "prilosec": "omeprazole",
+    "pan 40": "pantoprazole",
+    "pantocid": "pantoprazole",
+    "zyrtec": "cetirizine",
+    "cetzine": "cetirizine",
+    "allegra": "fexofenadine",
+    "azithral": "azithromycin",
+    "zithromax": "azithromycin",
+    "cipro": "ciprofloxacin",
+}
+
+
 class DrugQABackend:
     def __init__(self, data_path=None):
         self.drugs = []
@@ -160,6 +196,8 @@ class DrugQABackend:
             # Direct keyword match
             if q in all_text:
                 score += 50
+            if q in DRUG_SYNONYMS and DRUG_SYNONYMS[q] in all_text:
+                score += 80
 
             # Known drug class boost
             if "hypertension" in q or "blood pressure" in q:
@@ -185,7 +223,7 @@ class DrugQABackend:
                 scored.append((score, drug))
 
         scored.sort(key=lambda x: x[0], reverse=True)
-        
+
         # DEBUG
         print(f"[DrugQA] Query: '{q}' | Matches: {len(scored)} | Top 5 scores: {[s[0] for s in scored[:5]]}")
         print(f"[DrugQA] Top 5 names: {[self._get_name(s[1]) for s in scored[:5]]}")
@@ -196,8 +234,11 @@ class DrugQABackend:
         if not name:
             return None
         name_lower = name.lower().strip()
-        for drug in self.drugs:
-            d_name = self._get_name(drug)
-            if d_name and (name_lower in d_name.lower() or d_name.lower() in name_lower):
-                return drug
+        canonical = DRUG_SYNONYMS.get(name_lower, name_lower)
+        # Search exact/substring match for both name and canonical alias
+        for target in [name_lower, canonical]:
+            for drug in self.drugs:
+                d_name = self._get_name(drug)
+                if d_name and (target in d_name.lower() or d_name.lower() in target):
+                    return drug
         return None

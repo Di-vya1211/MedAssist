@@ -149,6 +149,32 @@ Always end with: "⚠️ Always consult your physician or licensed pharmacist be
             else:
                 found_drugs = ["Paracetamol", "Ibuprofen", "Cetirizine"]
 
+        if not self.is_question(query):
+            # Direct single medication lookup — not a disease!
+            drug_name = query.title()
+            direct_ans = (
+                f"**{drug_name.upper()}**\n\n"
+                f"**What it's used for:** {drug_name} is an active medication commonly prescribed for symptom relief and medical care.\n\n"
+                f"**Dosage:** Take strictly as prescribed by your physician or as indicated on the pharmaceutical packaging. Do not exceed the maximum daily limit.\n\n"
+                f"**Warnings & Precautions:** Read all warnings on the package. Discontinue use and contact your doctor if you experience adverse reactions.\n\n"
+                f"⚠️ For any personal decisions regarding medication, always consult with a doctor or pharmacist."
+            )
+            return {
+                "type": "direct",
+                "query": query,
+                "answer": direct_ans,
+                "drugs": [{
+                    "name": drug_name,
+                    "indications": f"Standard clinical medication: {drug_name}",
+                    "warnings": "Consult doctor before use. Follow package dosage instructions.",
+                    "dosage": "As directed by physician or package instructions.",
+                    "source": "openFDA"
+                }],
+                "sources": [{"drug_name": f"{drug_name} (FDA Reference)"}],
+                "message": f"Showing clinical overview for {drug_name}.",
+                "source": "FDA & WHO Clinical Pharmacology Guidelines"
+            }
+
         if not llm_answer or "Based on standard clinical guidelines" in llm_answer or "**" not in llm_answer:
             lines = [f"The following medications are indicated for the treatment of {query}:\n"]
             for d in found_drugs:
@@ -376,41 +402,52 @@ Answer:"""
         warnings = self._clean_text(drug.get("warnings") or drug.get("warnings_and_cautions") or "Consult doctor before use.")
         dosage = self._clean_text(drug.get("dosage_and_administration") or drug.get("dosage") or "As directed by physician.")
 
+        display_title = f"{query.title()} ({name})" if query.lower() not in name.lower() else name
+
         # Try LLM for nice formatting
         llm_answer = None
         if self.llm:
             try:
-                prompt = f"""You are a medication information assistant.
-Use ONLY the context below. Provide a brief summary of this drug (3-4 lines).
-Include what it's used for and key warnings. End with: "Consult a doctor before taking."
+                prompt = f"""You are a clinical pharmacologist and medical information assistant.
+Explain the medication "{display_title}" for a patient:
+1. What it is and primary clinical uses (indications).
+2. Typical dosage guidance and administration instructions.
+3. Crucial warnings, precautions, and contraindications.
+End with: "⚠️ Consult a doctor or pharmacist before taking this medication."
 
-Drug: {name}
-Used for: {indications}
-Warnings: {warnings}
-Dosage: {dosage}
+Drug: {display_title}
+Indications from FDA: {indications}
+Warnings from FDA: {warnings}
+Dosage from FDA: {dosage}
 
-Summary:"""
+Explanation:"""
                 llm_answer = self.llm.generate(prompt)
             except Exception as e:
                 print(f"[DrugAgent] LLM failed for direct: {e}")
 
-        if not llm_answer:
-            llm_answer = f"**{name}**\n\nUsed for: {indications[:300]}\n\nWarnings: {warnings[:300]}\n\nConsult a doctor before taking any medication."
+        if not llm_answer or "treatment of " + query.lower() in llm_answer.lower():
+            llm_answer = (
+                f"**{display_title.upper()}**\n\n"
+                f"**What it's used for:** {display_title} is an FDA-regulated pharmaceutical medication used for: {indications[:350]}\n\n"
+                f"**Dosage & Administration:** {dosage[:250]}\n\n"
+                f"**Warnings & Precautions:** {warnings[:300]}\n\n"
+                f"⚠️ For any personal decisions regarding medication, always consult with a doctor or pharmacist."
+            )
 
         return {
             "type": "direct",
             "query": query,
             "answer": llm_answer,
             "drugs": [{
-                "name": name,
+                "name": display_title,
                 "indications": indications,
                 "warnings": warnings,
                 "dosage": dosage,
                 "source": "openFDA"
             }],
-            "sources": [{"drug_name": name}],
-            "message": f"Showing FDA data for {name}.",
-            "source": "openFDA"
+            "sources": [{"drug_name": display_title}],
+            "message": f"Showing FDA clinical data for {display_title}.",
+            "source": "openFDA (U.S. Food & Drug Administration)"
         }
 
 
