@@ -15,7 +15,10 @@ handle that failure by falling back to the original English text, so the
 user still gets an answer.
 """
 
-from deep_translator import GoogleTranslator
+try:
+    from deep_translator import GoogleTranslator
+except ImportError:
+    GoogleTranslator = None
 
 # Languages the user can choose from, mapped to Google Translate's language codes.
 # Add more entries here if you need to support additional Indian languages.
@@ -120,9 +123,12 @@ def translate_text(text: str, target_lang: str = "hi") -> str:
 
     result = clean_str
     try:
-        translated = GoogleTranslator(source="auto", target=target_lang).translate(clean_str)
-        if translated and str(translated).strip():
-            result = translated
+        if GoogleTranslator is not None:
+            translated = GoogleTranslator(source="auto", target=target_lang).translate(clean_str)
+            if translated and str(translated).strip():
+                result = translated
+        else:
+            result = translate_with_llm(clean_str, target_lang=target_lang)
     except Exception as e:
         print(f"[translation_agent] GoogleTranslator notice ({e}), trying LLM...")
         result = translate_with_llm(clean_str, target_lang=target_lang)
