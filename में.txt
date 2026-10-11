@@ -1,0 +1,4 @@
+gtts>=2.4.0
+SpeechRecognition>=3.10.0
+google-cloud-speech>=2.21.0
+google-cloud-texttospeech>=2.14.0

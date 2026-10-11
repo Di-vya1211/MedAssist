@@ -1,0 +1,113 @@
+# Streamlit secrets (NEVER commit API keys!)
+.streamlit/secrets.toml
+
+# ChromaDB data (local only)
+chroma_data/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+
+# Logs
+*.log
+logs/
+
+# Cache
+.cache/
+*.cache
+
+# Temporary files
+*.tmp
+*.bak
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large files
+*.pdf
+*.zip
+*.tar.gz
+
+# JSON data files (optional - if too large)
+# medical_tests_db.json
+# disease_symptom_map.json
+
+data/chroma_db/
+data/fda_drugs_bulk.jsonl
+data/medassist_complete.json
+__pycache__/
+.envvenv/ 
+*.pt 
+config/.env 
+.env 
+*.db 
+*.sqlite3 
+patients.db 
+data/fda_drugs_bulk.jsonl 
+data/*.xml 
+chroma_db/ 
+data/chroma_db/ 
+data/chroma_rag_db/ 
+data/vector_db/ 
+__pycache__/ 
+*/__pycache__/ 
+voice/audio_samples/ 
+config/.env 
+.env 
+*.db 
+*.sqlite3 
+patients.db 
+config/.env 
+.env 
+*.db 
+*.sqlite3 
+patients.db 
+data/fda_drugs_bulk.jsonl 
+data/*.xml 
+chroma_db/ 
+data/chroma_db/ 
+data/chroma_rag_db/ 
+data/vector_db/ 
+__pycache__/ 
+*/__pycache__/ 
+voice/audio_samples/ 
