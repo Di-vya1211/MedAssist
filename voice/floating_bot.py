@@ -1,9 +1,9 @@
 """
 MedAssist - Cute Floating 3D AI Health Companion Bot
-Displays a small floating 3D robot avatar on the bottom-right corner that
-gently bobs up and down with a 'How may I help you? 👋' speech bubble.
-When clicked, opens an intelligent clinical dialogue where the bot greets the user
-and answers all their health, symptom, and medication questions with allergy safeguards.
+Fixed bottom-right corner interactive companion that gently floats/bobs on the screen
+with the user's 3D robot avatar and 'How may I help you? 👋' speech bubble.
+Clicking the robot opens the intelligent medical dialogue where the bot assists
+the patient with symptom checking, medication questions, and allergy safeguards.
 """
 
 import os
@@ -17,7 +17,7 @@ AVATAR_PATH = os.path.join(BASE_DIR, "assets", "bot_avatar.png")
 
 
 def get_bot_avatar_b64() -> str:
-    """Returns base64 encoded string of the user-provided 3D robot image."""
+    """Returns base64 encoded string of the 3D robot image."""
     if os.path.exists(AVATAR_PATH):
         try:
             with open(AVATAR_PATH, "rb") as f:
@@ -28,7 +28,7 @@ def get_bot_avatar_b64() -> str:
 
 
 def init_floating_bot_state():
-    """Initializes session state for the floating bot."""
+    """Initializes session state for the floating bot dialogue."""
     if "floating_bot_history" not in st.session_state:
         is_hindi = st.session_state.get("language", "en") == "hi"
         greeting = (
@@ -51,14 +51,14 @@ def init_floating_bot_state():
 @st.dialog("🤖 MedAssist AI Companion", width="medium")
 def open_medassist_bot_dialog(patient_id: Optional[int] = None, patient_db = None):
     """
-    Interactive modal dialog where the 3D bot greets the user
+    Interactive clinical dialogue modal where the 3D robot greets the patient
     and answers whatever clinical or medical questions they ask.
     """
     init_floating_bot_state()
     b64 = get_bot_avatar_b64()
     is_hindi = st.session_state.get("language", "en") == "hi"
 
-    # Header Card with 3D Robot Image
+    # Header Card with the 3D Robot Image
     st.markdown(f"""
     <div style='display: flex; align-items: center; gap: 14px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 14px; padding: 12px 16px; margin-bottom: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.3);'>
         <img src='data:image/png;base64,{b64}' style='width: 56px; height: 56px; border-radius: 50%; border: 2.5px solid #38bdf8; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.5); object-fit: cover; background: #0b0f19;' />
@@ -138,7 +138,7 @@ def open_medassist_bot_dialog(patient_id: Optional[int] = None, patient_db = Non
         _process_bot_query(user_input.strip(), patient_id, patient_db)
         st.rerun()
 
-    # Clear chat / Reset Button
+    # Reset Chat Button
     col_clr, _ = st.columns([1.5, 3])
     with col_clr:
         if st.button("🗑️ Reset Chat", key="clear_chat_dialog_btn", use_container_width=True):
@@ -189,8 +189,8 @@ def _process_bot_query(query: str, patient_id: Optional[int], patient_db):
 
 def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
     """
-    Renders the small 3D robot avatar (Image 2) on the bottom-right corner.
-    Floats continuously with a bobbing animation and 'How may I help you? 👋' tooltip.
+    Renders the small 3D robot avatar on the bottom-right corner.
+    Floats continuously with a gentle bobbing animation and 'How may I help you? 👋' tooltip.
     Clicking it opens the conversational AI health assistant dialogue.
     """
     init_floating_bot_state()
@@ -198,30 +198,24 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
     is_hindi = st.session_state.get("language", "en") == "hi"
     speech_text = "How may I help you? 👋" if not is_hindi else "मैं आपकी क्या सहायता करूँ? 👋"
 
-    # Inject Floating Bot CSS
-    st.markdown(f"""
+    # Render the standalone HTML floating bot with floating animation and click handler
+    st.html(f"""
     <style>
-    /* Fixed Floating Bot Container at Bottom-Right */
-    div[data-testid="stVerticalBlock"]:has(> div #floating-bot-marker),
-    div[data-testid="stElementContainer"]:has(> div #floating-bot-marker) {{
+    /* Fixed Floating Bot Widget (Bottom-Right Corner) */
+    #medassist-bot-container {{
         position: fixed !important;
-        bottom: 24px !important;
-        right: 24px !important;
+        bottom: 25px !important;
+        right: 25px !important;
         z-index: 9999999 !important;
-        width: 76px !important;
-        height: 76px !important;
-        max-width: 76px !important;
-        max-height: 76px !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        overflow: visible !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-end !important;
+        gap: 8px !important;
+        pointer-events: auto !important;
     }}
 
     /* Tooltip Speech Bubble Floating Above the Bot */
-    .floating-bot-speech-bubble {{
-        position: fixed;
-        bottom: 110px;
-        right: 20px;
+    .bot-speech-bubble {{
         background: #1e293b;
         color: #f8fafc;
         border: 1.5px solid #38bdf8;
@@ -229,17 +223,18 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
         padding: 6px 14px;
         font-size: 0.82rem;
         font-weight: 700;
-        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5), 0 0 10px rgba(56, 189, 248, 0.2);
-        z-index: 9999999;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5), 0 0 10px rgba(56, 189, 248, 0.25);
         animation: botFloatingBob 3s ease-in-out infinite;
-        pointer-events: none;
         white-space: nowrap;
+        position: relative;
+        cursor: pointer;
+        user-select: none;
     }}
-    .floating-bot-speech-bubble::after {{
+    .bot-speech-bubble::after {{
         content: '';
         position: absolute;
         bottom: -6px;
-        right: 28px;
+        right: 24px;
         width: 10px;
         height: 10px;
         background: #1e293b;
@@ -249,42 +244,34 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
     }}
 
     /* 3D Robot Head Circular Floating Button */
-    div[data-testid="stVerticalBlock"]:has(> div #floating-bot-marker) button,
-    div[data-testid="stElementContainer"]:has(> div #floating-bot-marker) button {{
-        width: 72px !important;
-        height: 72px !important;
-        min-width: 72px !important;
-        min-height: 72px !important;
-        max-width: 72px !important;
-        max-height: 72px !important;
-        border-radius: 50% !important;
-        background-image: url('data:image/png;base64,{b64}') !important;
-        background-size: 90% !important;
-        background-position: center !important;
-        background-repeat: no-repeat !important;
-        background-color: #0b0f19 !important;
-        border: 3px solid #38bdf8 !important;
-        box-shadow: 0 8px 24px rgba(2, 132, 199, 0.6), 0 0 16px rgba(56, 189, 248, 0.4) !important;
-        cursor: pointer !important;
-        animation: botFloatingBob 3s ease-in-out infinite !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        color: transparent !important;
-        overflow: hidden !important;
-        transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease !important;
+    .bot-avatar-circle {{
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background-color: #0b0f19;
+        border: 3px solid #38bdf8;
+        box-shadow: 0 8px 24px rgba(2, 132, 199, 0.6), 0 0 16px rgba(56, 189, 248, 0.4);
+        cursor: pointer;
+        animation: botFloatingBob 3s ease-in-out infinite;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+        user-select: none;
     }}
 
-    div[data-testid="stVerticalBlock"]:has(> div #floating-bot-marker) button:hover,
-    div[data-testid="stElementContainer"]:has(> div #floating-bot-marker) button:hover {{
-        transform: scale(1.12) translateY(-2px) !important;
-        box-shadow: 0 14px 35px rgba(56, 189, 248, 0.85), 0 0 25px rgba(56, 189, 248, 0.6) !important;
-        border-color: #ffffff !important;
+    .bot-avatar-circle img {{
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        pointer-events: none;
     }}
 
-    /* Hide button text so only the 3D robot face is shown */
-    div[data-testid="stVerticalBlock"]:has(> div #floating-bot-marker) button *,
-    div[data-testid="stElementContainer"]:has(> div #floating-bot-marker) button * {{
-        display: none !important;
+    .bot-avatar-circle:hover {{
+        transform: scale(1.12) translateY(-2px);
+        box-shadow: 0 14px 35px rgba(56, 189, 248, 0.85), 0 0 25px rgba(56, 189, 248, 0.6);
+        border-color: #ffffff;
     }}
 
     /* Gentle Floating Bobbing Keyframes */
@@ -293,17 +280,50 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
             transform: translateY(0px);
         }}
         50% {{
-            transform: translateY(-9px);
+            transform: translateY(-8px);
         }}
         100% {{
             transform: translateY(0px);
         }}
     }}
-    </style>
-    <div class="floating-bot-speech-bubble">{speech_text}</div>
-    <div id="floating-bot-marker"></div>
-    """, unsafe_allow_html=True)
 
-    # Clickable Floating Bot Button
-    if st.button("🤖", key="floating_bot_circle_btn", help="Click to chat with MedAssist AI"):
+    /* Hide the Streamlit trigger button from view */
+    .medassist-hidden-trigger-wrapper {{
+        position: fixed !important;
+        bottom: 0px !important;
+        right: 0px !important;
+        width: 1px !important;
+        height: 1px !important;
+        opacity: 0 !important;
+        overflow: hidden !important;
+        pointer-events: none !important;
+        z-index: -999 !important;
+    }}
+    </style>
+
+    <div id="medassist-bot-container">
+        <div class="bot-speech-bubble" onclick="openMedassistBotModal()">
+            {speech_text}
+        </div>
+        <div class="bot-avatar-circle" onclick="openMedassistBotModal()" title="Click to chat with MedAssist AI">
+            <img src="data:image/png;base64,{b64}" alt="MedAssist AI Bot" />
+        </div>
+    </div>
+
+    <script>
+    function openMedassistBotModal() {{
+        // Find and click the Streamlit bridge button
+        const allButtons = Array.from(document.querySelectorAll('button'));
+        const bridgeBtn = allButtons.find(b => b.innerText && b.innerText.includes('MEDASSIST_BOT_TRIGGER_KEY'));
+        if (bridgeBtn) {{
+            bridgeBtn.click();
+        }}
+    }}
+    </script>
+    """)
+
+    # Streamlit bridge button (hidden with opacity:0, triggered by JavaScript onclick)
+    st.markdown('<div class="medassist-hidden-trigger-wrapper">', unsafe_allow_html=True)
+    if st.button("MEDASSIST_BOT_TRIGGER_KEY", key="hidden_bot_action_trigger"):
         open_medassist_bot_dialog(patient_id, patient_db)
+    st.markdown('</div>', unsafe_allow_html=True)

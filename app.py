@@ -549,7 +549,6 @@ def main():
     # ========== 1. AUTHENTICATION ==========
     authenticated, patient_id = render_auth()
     if not authenticated:
-        render_floating_bot()
         st.stop()
 
     db = get_patient_db()
