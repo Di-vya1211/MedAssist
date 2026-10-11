@@ -3417,10 +3417,19 @@ def check_allergy_warnings(topic: dict, patient_allergies: list):
         return []
     keywords = topic.get("allergy_keywords", [])
     matched = []
-    patient_allergies_lower = [str(a).lower().strip() for a in patient_allergies]
+    allergy_names = []
+    for a in patient_allergies:
+        if isinstance(a, dict):
+            name = a.get("medicine_name") or a.get("allergen") or a.get("name") or ""
+            if name:
+                allergy_names.append(str(name).lower().strip())
+        elif isinstance(a, str) and a.strip():
+            allergy_names.append(a.lower().strip())
+
     for kw in keywords:
         kw_l = kw.lower().strip()
-        for pa in patient_allergies_lower:
+        for pa in allergy_names:
             if kw_l in pa or pa in kw_l:
                 matched.append(kw)
     return list(set(matched))
+

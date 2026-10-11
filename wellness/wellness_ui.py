@@ -250,7 +250,16 @@ def render_wellness_hub_tab(patient_id: Optional[int] = None, patient_db = None)
         except Exception as e:
             print(f"[Wellness] Error reading patient allergies: {e}")
 
-    matched_allergies = check_allergy_warnings(selected_topic, patient_allergies)
+    patient_allergy_names = []
+    for a in patient_allergies:
+        if isinstance(a, dict):
+            name = a.get("medicine_name") or a.get("allergen") or a.get("name")
+            if name:
+                patient_allergy_names.append(str(name).strip())
+        elif isinstance(a, str) and a.strip():
+            patient_allergy_names.append(a.strip())
+
+    matched_allergies = check_allergy_warnings(selected_topic, patient_allergy_names)
 
     # Title & Metadata Card
     st.markdown(f"""
@@ -301,11 +310,12 @@ def render_wellness_hub_tab(patient_id: Optional[int] = None, patient_db = None)
             </p>
         </div>
         """, unsafe_allow_html=True)
-    elif patient_allergies:
+    elif patient_allergy_names:
+        safe_allergies_str = ", ".join([a.title() for a in patient_allergy_names])
         st.markdown(f"""
         <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 8px 14px; margin-bottom: 16px;">
             <span style="color: #34d399; font-weight: 600; font-size: 0.85rem;">
-                🛡️ Allergy Guard: Cross-checked against your recorded allergies ({', '.join(patient_allergies)}). No conflict detected.
+                🛡️ Allergy Guard: Cross-checked against your recorded allergies ({safe_allergies_str}). No conflict detected.
             </span>
         </div>
         """, unsafe_allow_html=True)
