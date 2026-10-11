@@ -225,12 +225,8 @@ class LLMClient:
                     except Exception as groq_err:
                         print(f"[LLMClient] Groq fallback also failed: {groq_err}")
 
-        # Fallback clinical response when offline or network fails
-        return (
-            "Based on standard clinical guidelines, it is advised to monitor your symptoms closely, "
-            "stay hydrated, maintain adequate rest, and avoid self-medicating without medical guidance. "
-            "If symptoms worsen or red flags appear, please consult a licensed healthcare professional promptly."
-        )
+        # Raise RuntimeError so domain modules (drugs, reports, symptoms) use their specialized clinical fallbacks
+        raise RuntimeError("LLM service currently unavailable from both Groq and Gemini providers.")
 
 
 # Backward compatibility

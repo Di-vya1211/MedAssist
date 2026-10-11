@@ -23,7 +23,7 @@ from wellness.wellness_dataset import (
     search_wellness_topics,
     check_allergy_warnings,
 )
-from voice.voice_ui import render_voice_input_widget
+from voice.voice_ui import render_voice_input_widget, render_read_aloud_widget
 from voice.voice_service import voice_service
 
 
@@ -313,42 +313,29 @@ def render_wellness_hub_tab(patient_id: Optional[int] = None, patient_db = None)
     # ═══════════════════════════════════════════════════════════════════════════
     # VOICE OUTPUT (TTS / READ ALOUD)
     # ═══════════════════════════════════════════════════════════════════════════
-    st.markdown("<p style='color:#cbd5e1; font-weight:600; font-size:0.9rem; margin-bottom:6px;'>🔊 Read Aloud / नुस्खे सुनें (Audio):</p>", unsafe_allow_html=True)
-    col_tts_hi, col_tts_en, _ = st.columns([1.5, 1.5, 2.5])
+    # Universal Dual-Layer Read Aloud (Browser Web Speech + Persistent MP3)
+    speech_hi = (
+        f"{selected_topic['title_hi']} के लिए प्रमुख उपाय। "
+        f"आयुर्वेदिक उपाय: {'. '.join(selected_topic.get('ayurvedic_remedies_hi', [])[:2])}। "
+        f"घरेलू नुस्खे: {'. '.join(selected_topic.get('home_remedies_hi', [])[:2])}। "
+        f"सावधानी: {selected_topic.get('when_to_see_doctor_hi', '')}"
+    )
+    speech_en = (
+        f"Remedies for {selected_topic['title_en']}. "
+        f"Ayurvedic care: {'. '.join(selected_topic.get('ayurvedic_remedies_en', [])[:2])}. "
+        f"Home remedies: {'. '.join(selected_topic.get('home_remedies_en', [])[:2])}. "
+        f"Safety note: {selected_topic.get('when_to_see_doctor_en', '')}"
+    )
 
-    with col_tts_hi:
-        if st.button("🔊 हिन्दी में सुनें (Audio)", key=f"tts_hi_{selected_topic['id']}", use_container_width=True):
-            with st.spinner("ऑडियो तैयार हो रहा है..."):
-                speech_text = (
-                    f"{selected_topic['title_hi']} के लिए प्रमुख उपाय। "
-                    f"आयुर्वेदिक उपाय: {'. '.join(selected_topic.get('ayurvedic_remedies_hi', [])[:2])}। "
-                    f"घरेलू नुस्खे: {'. '.join(selected_topic.get('home_remedies_hi', [])[:2])}। "
-                    f"सावधानी: {selected_topic.get('when_to_see_doctor_hi', '')}"
-                )
-                audio_path = voice_service.text_to_speech(
-                    speech_text,
-                    lang_code="hi",
-                    output_path=f"voice_wellness_{selected_topic['id']}_hi.mp3"
-                )
-                if audio_path and os.path.exists(audio_path):
-                    st.audio(audio_path, format="audio/mp3")
-
-    with col_tts_en:
-        if st.button("🔊 Listen in English", key=f"tts_en_{selected_topic['id']}", use_container_width=True):
-            with st.spinner("Generating audio..."):
-                speech_text = (
-                    f"Remedies for {selected_topic['title_en']}. "
-                    f"Ayurvedic care: {'. '.join(selected_topic.get('ayurvedic_remedies_en', [])[:2])}. "
-                    f"Home remedies: {'. '.join(selected_topic.get('home_remedies_en', [])[:2])}. "
-                    f"Safety note: {selected_topic.get('when_to_see_doctor_en', '')}"
-                )
-                audio_path = voice_service.text_to_speech(
-                    speech_text,
-                    lang_code="en",
-                    output_path=f"voice_wellness_{selected_topic['id']}_en.mp3"
-                )
-                if audio_path and os.path.exists(audio_path):
-                    st.audio(audio_path, format="audio/mp3")
+    is_curr_hindi = st.session_state.get("language", "en") == "hi"
+    curr_speech = speech_hi if is_curr_hindi else speech_en
+    curr_label = "🔊 Read Aloud Remedies / नुस्खे बोलकर सुनें" if is_curr_hindi else "🔊 Read Aloud Remedies (Audio)"
+    render_read_aloud_widget(
+        text_to_read=curr_speech,
+        widget_key=f"wellness_tts_{selected_topic['id']}",
+        label=curr_label,
+        forced_lang="hi" if is_curr_hindi else "en"
+    )
 
     # ═══════════════════════════════════════════════════════════════════════════
     # CLINICAL REMEDY TABS

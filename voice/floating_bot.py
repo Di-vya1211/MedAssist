@@ -143,12 +143,16 @@ def open_medassist_bot_dialog(patient_id: Optional[int] = None, patient_db = Non
         _process_bot_query(user_input.strip(), patient_id, patient_db)
         st.rerun()
 
-    # Reset Chat Button
-    col_clr, _ = st.columns([1.5, 3])
+    # Reset Chat and Close Dialog Buttons
+    col_clr, col_close = st.columns([1, 1])
     with col_clr:
         if st.button("🗑️ Reset Chat", key="clear_chat_dialog_btn", use_container_width=True):
             st.session_state.floating_bot_history = []
             init_floating_bot_state()
+            st.rerun()
+    with col_close:
+        if st.button("✕ Close / बंद करें", key="close_chat_dialog_btn", use_container_width=True):
+            st.session_state.floating_bot_dialog_open = False
             st.rerun()
 
 
@@ -456,14 +460,38 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
     }}
     </style>
 
-    <div id="medassist-bot-container">
-        <div class="bot-speech-bubble" onclick="(function(){{ var b = Array.from(document.querySelectorAll('button')).find(function(x){{ return x.textContent && x.textContent.indexOf('MEDASSIST_BOT_CLICK_ACTION') !== -1; }}); if(b) b.click(); }})()">
+    <div id="medassist-bot-container" onclick="medassistClickBotToggle()">
+        <div class="bot-speech-bubble" onclick="medassistClickBotToggle(); event.stopPropagation();">
             {speech_text}
         </div>
-        <div class="bot-avatar-circle" title="Click to chat with MedAssist AI">
+        <div class="bot-avatar-circle" title="Click to chat with MedAssist AI / चैट खोलने या बंद करने के लिए क्लिक करें" onclick="medassistClickBotToggle(); event.stopPropagation();">
             <img src="data:image/png;base64,{b64}" alt="MedAssist AI Bot" />
         </div>
     </div>
+
+    <script>
+    function medassistClickBotToggle() {{
+        var targets = [document];
+        if (window.parent && window.parent.document) {{
+            targets.push(window.parent.document);
+        }}
+        if (window.top && window.top.document) {{
+            targets.push(window.top.document);
+        }}
+        for (var i = 0; i < targets.length; i++) {{
+            try {{
+                var btns = Array.from(targets[i].querySelectorAll('button'));
+                var b = btns.find(function(x) {{
+                    return x.textContent && x.textContent.indexOf('MEDASSIST_BOT_CLICK_ACTION') !== -1;
+                }});
+                if (b) {{
+                    b.click();
+                    return;
+                }}
+            }} catch(e) {{}}
+        }}
+    }}
+    </script>
     """)
 
     # Native Streamlit clickable button anchor and button (Handles pure-python open/close toggle)

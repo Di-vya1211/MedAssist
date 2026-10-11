@@ -56,7 +56,7 @@ importlib.reload(voice.voice_ui)
 importlib.reload(voice.voice_assistant)
 importlib.reload(voice.floating_bot)
 from voice.voice_service import voice_service
-from voice.voice_ui import render_voice_input_widget
+from voice.voice_ui import render_voice_input_widget, render_read_aloud_widget
 from voice.voice_assistant import conversational_assistant
 from voice.floating_bot import render_floating_bot
 
@@ -188,6 +188,117 @@ def normalize_name(s: str) -> str:
     s = re.sub(r'[()\[\]{}]', '', s)
     s = re.sub(r'[^a-z0-9]', '', s)
     return s
+
+
+def fetch_medical_test_details(test_name: str, disease_name: str = "") -> dict:
+    """
+    Fetches rich clinical details for any diagnostic test.
+    Checks medical_tests_db first, then session cache, then LLM, then clinical heuristics.
+    Guarantees test_data is NEVER empty.
+    """
+    clean_name = test_name.strip()
+    norm_key = normalize_name(clean_name)
+
+    # 1. Check medical_tests_db
+    matched_data = None
+    if medical_tests_db:
+        if clean_name.lower() in medical_tests_db:
+            matched_data = medical_tests_db[clean_name.lower()]
+        else:
+            for db_name, db_data in medical_tests_db.items():
+                if norm_key in normalize_name(db_name) or normalize_name(db_name) in norm_key:
+                    matched_data = db_data
+                    break
+
+    if matched_data and matched_data.get("description") and matched_data.get("why_done"):
+        return {
+            "name": matched_data.get("name", clean_name.title()),
+            "description": matched_data.get("description", "A standard diagnostic test used in medical evaluation."),
+            "why_done": matched_data.get("why_done", f"Performed to assess clinical status and diagnose conditions related to {disease_name or 'the patient\'s symptoms'}."),
+            "how_you_prepare": matched_data.get("how_you_prepare", "Follow all specific clinic instructions. Fasting may be necessary for blood draws."),
+            "normal_values": matched_data.get("normal_values", "Results should be interpreted by your healthcare provider alongside clinical signs.")
+        }
+
+    # 2. Check session cache
+    cache_key = f"_cached_test_{clean_name.lower()}"
+    if cache_key in st.session_state:
+        return st.session_state[cache_key]
+
+    # 3. Query LLMClient for structured test details
+    llm_test_data = None
+    try:
+        from core.llm import LLMClient
+        llm = LLMClient()
+        prompt = f"""You are a clinical laboratory medicine expert. Provide structured medical test details for:
+Test Name: "{clean_name}"
+Associated Condition: "{disease_name}"
+
+Return ONLY a valid JSON object with these exact keys:
+{{
+  "name": "{clean_name.title()}",
+  "description": "2-3 clear sentences describing what this test evaluates and measures.",
+  "why_done": "Why physicians recommend this test and what abnormalities it identifies.",
+  "how_you_prepare": "Patient preparation rules (e.g. fasting hours, water intake, medications to avoid, timing).",
+  "normal_values": "Typical reference values and clinical meaning of abnormal readings."
+}}"""
+        resp_text = llm.generate(prompt)
+        match = re.search(r'\{.*\}', resp_text, re.DOTALL)
+        if match:
+            parsed = json.loads(match.group(0))
+            if parsed.get("description") and parsed.get("why_done"):
+                llm_test_data = parsed
+    except Exception as e:
+        print(f"[MedicalTest] LLM detail generation notice: {e}")
+
+    if llm_test_data:
+        st.session_state[cache_key] = llm_test_data
+        return llm_test_data
+
+    # 4. Domain-specific clinical heuristics fallback
+    t_low = clean_name.lower()
+    if any(k in t_low for k in ["glucose", "ogtt", "sugar", "tolerance", "a1c", "hba1c"]):
+        heuristic_data = {
+            "name": clean_name.title(),
+            "description": "The Oral Glucose Tolerance Test (OGTT) and glucose assays evaluate how efficiently your body clears sugar from the bloodstream after fasting and glucose ingestion. It assesses pancreatic beta-cell function and insulin sensitivity.",
+            "why_done": f"Diagnoses Type 2 Diabetes, Prediabetes, and Gestational Diabetes, and monitors glycemic control in patients with {disease_name or 'metabolic disorders'}.",
+            "how_you_prepare": "Fast overnight for at least 8 to 12 hours prior to the test (water is permitted). Maintain normal carbohydrate intake for 3 days prior. Avoid strenuous exercise or smoking before the test.",
+            "normal_values": "Fasting: Under 100 mg/dL (Normal). 2 Hours post-glucose: Less than 140 mg/dL (Normal); 140 to 199 mg/dL indicates Prediabetes (Impaired Glucose Tolerance); 200 mg/dL or higher indicates Diabetes."
+        }
+    elif any(k in t_low for k in ["lipid", "cholesterol", "triglyceride", "ldl", "hdl"]):
+        heuristic_data = {
+            "name": clean_name.title(),
+            "description": "A comprehensive lipid profile measures circulating blood fats including Total Cholesterol, High-Density Lipoprotein (HDL), Low-Density Lipoprotein (LDL), and Triglycerides.",
+            "why_done": f"Evaluates cardiovascular risk, arterial plaque formation, and monitors response to statin therapy or dietary interventions for {disease_name or 'cardiac health'}.",
+            "how_you_prepare": "Fast for 9 to 12 hours before the blood draw (water only). Avoid alcohol for 24 hours prior. Take regular morning medications unless instructed otherwise.",
+            "normal_values": "Total Cholesterol: < 200 mg/dL; LDL (Bad): < 100 mg/dL; HDL (Good): > 40 mg/dL (men), > 50 mg/dL (women); Triglycerides: < 150 mg/dL."
+        }
+    elif any(k in t_low for k in ["blood", "cbc", "hemoglobin", "tlc", "wbc", "platelet"]):
+        heuristic_data = {
+            "name": clean_name.title(),
+            "description": "A Complete Blood Count (CBC) examines cellular components of the blood: red blood cells (erythrocytes), white blood cells (leukocytes), and platelets (thrombocytes).",
+            "why_done": f"Screens for anemia, acute or chronic infections, systemic inflammation, bleeding disorders, and immune system status in connection with {disease_name or 'systemic illness'}.",
+            "how_you_prepare": "Usually requires no special fasting unless performed alongside a fasting metabolic or lipid panel. Drink adequate water beforehand.",
+            "normal_values": "Hemoglobin: 12.0-16.5 g/dL; WBC Count: 4,000-11,000 cells/mcL; Platelets: 150,000-450,000 cells/mcL; Hematocrit: 36%-50%."
+        }
+    elif any(k in t_low for k in ["kidney", "renal", "creatinine", "bun", "urea", "gfr"]):
+        heuristic_data = {
+            "name": clean_name.title(),
+            "description": "Renal function testing evaluates blood urea nitrogen (BUN), serum creatinine, and estimated glomerular filtration rate (eGFR) to assess kidney filtration efficacy.",
+            "why_done": f"Detects acute or chronic kidney impairment, dehydration, and drug toxicity related to {disease_name or 'renal health'}.",
+            "how_you_prepare": "Avoid eating large portions of cooked red meat for 24 hours prior, as it can temporarily elevate creatinine levels. Stay well hydrated.",
+            "normal_values": "Serum Creatinine: 0.7 to 1.3 mg/dL; Blood Urea Nitrogen (BUN): 7 to 20 mg/dL; eGFR: 90 mL/min/1.73m² or higher (Normal)."
+        }
+    else:
+        heuristic_data = {
+            "name": clean_name.title(),
+            "description": f"Standard clinical diagnostic procedure recommended to evaluate physiological status, detect abnormalities, and monitor response to treatment for {disease_name or 'the condition'}.",
+            "why_done": f"Provides objective quantitative and qualitative clinical data to confirm diagnosis and optimize clinical care for {disease_name or 'the patient'}.",
+            "how_you_prepare": "Follow all preparatory instructions given by your clinic. If blood work is involved, 8-hour fasting is frequently advisable unless instructed otherwise.",
+            "normal_values": "Clinical reference intervals vary by laboratory equipment and methodology. Your physician will review abnormal values in context of your overall health."
+        }
+
+    st.session_state[cache_key] = heuristic_data
+    return heuristic_data
 
 
 # ---------------------------------------------------------------------------
@@ -880,15 +991,13 @@ def main():
             # Display Test Detail View if selected
             if st.session_state.get("selected_medical_test"):
                 test_key = st.session_state.selected_medical_test
-                test_data = medical_tests_db.get(test_key, {})
+                test_data = fetch_medical_test_details(test_key, data.get('disease_name', ''))
 
-                if not test_data:
-                    norm_key = normalize_name(test_key)
-                    for db_name, db_data in medical_tests_db.items():
-                        if norm_key in normalize_name(db_name):
-                            test_data = db_data
-                            test_key = db_name
-                            break
+                # Translate into Hindi if active language is 'hi'
+                if st.session_state.language == "hi" and TRANSLATION_OK:
+                    for field in ["name", "description", "why_done", "how_you_prepare", "normal_values"]:
+                        if test_data.get(field):
+                            test_data[field] = translate_content(test_data[field], target_lang="hi")
 
                 st.markdown("---")
                 b_col, t_col = st.columns([1, 4])
@@ -897,40 +1006,47 @@ def main():
                         del st.session_state.selected_medical_test
                         st.rerun()
                 with t_col:
-                    disp_name = test_data.get('name', test_key.title()) if test_data else test_key.title()
+                    disp_name = test_data.get('name', test_key.title())
                     st.markdown(f"<h3 style='color:#38bdf8; margin:0;'>🔬 {disp_name}</h3>", unsafe_allow_html=True)
 
-                if test_data:
-                    td1, td2 = st.columns(2)
-                    with td1:
+                td1, td2 = st.columns(2)
+                with td1:
+                    st.markdown(f"""
+                    <div class="info-card" style="border-left-color: #38bdf8;">
+                        <h4 style="color:#38bdf8; margin:0 0 6px 0;">📝 About Test</h4>
+                        <p style="margin:0; line-height:1.6;">{test_data.get('description', 'Information not available.')}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    if test_data.get('why_done'):
                         st.markdown(f"""
-                        <div class="info-card" style="border-left-color: #38bdf8;">
-                            <h4 style="color:#38bdf8; margin:0 0 6px 0;">📝 About Test</h4>
-                            <p style="margin:0;">{test_data.get('description', 'Information not available.')}</p>
+                        <div class="info-card" style="border-left-color: #10b981;">
+                            <h4 style="color:#10b981; margin:0 0 6px 0;">🎯 Why It's Done</h4>
+                            <p style="margin:0; line-height:1.6;">{test_data.get('why_done')}</p>
                         </div>
                         """, unsafe_allow_html=True)
-                        if test_data.get('why_done'):
-                            st.markdown(f"""
-                            <div class="info-card" style="border-left-color: #10b981;">
-                                <h4 style="color:#10b981; margin:0 0 6px 0;">🎯 Why It's Done</h4>
-                                <p style="margin:0;">{test_data.get('why_done')}</p>
-                            </div>
-                            """, unsafe_allow_html=True)
-                    with td2:
-                        if test_data.get('how_you_prepare'):
-                            st.markdown(f"""
-                            <div class="info-card" style="border-left-color: #f59e0b;">
-                                <h4 style="color:#f59e0b; margin:0 0 6px 0;">⚠️ Preparation</h4>
-                                <p style="margin:0;">{test_data.get('how_you_prepare')}</p>
-                            </div>
-                            """, unsafe_allow_html=True)
-                        if test_data.get('normal_values'):
-                            st.markdown(f"""
-                            <div class="info-card" style="border-left-color: #a855f7;">
-                                <h4 style="color:#a855f7; margin:0 0 6px 0;">✅ Normal Range</h4>
-                                <p style="margin:0;">{test_data.get('normal_values')}</p>
-                            </div>
-                            """, unsafe_allow_html=True)
+                with td2:
+                    if test_data.get('how_you_prepare'):
+                        st.markdown(f"""
+                        <div class="info-card" style="border-left-color: #f59e0b;">
+                            <h4 style="color:#f59e0b; margin:0 0 6px 0;">⚠️ Preparation</h4>
+                            <p style="margin:0; line-height:1.6;">{test_data.get('how_you_prepare')}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    if test_data.get('normal_values'):
+                        st.markdown(f"""
+                        <div class="info-card" style="border-left-color: #a855f7;">
+                            <h4 style="color:#a855f7; margin:0 0 6px 0;">✅ Normal Range & Interpretation</h4>
+                            <p style="margin:0; line-height:1.6;">{test_data.get('normal_values')}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                # Test Read Aloud
+                test_speech = f"{disp_name}. {test_data.get('description', '')}. Preparation: {test_data.get('how_you_prepare', '')}. Normal range: {test_data.get('normal_values', '')}."
+                render_read_aloud_widget(
+                    test_speech,
+                    widget_key=f"test_{normalize_name(test_key)[:12]}",
+                    label="🔊 Listen to Test Details / टेस्ट की जानकारी सुनें"
+                )
 
             # Display Disease Content Cards
             if not st.session_state.get("selected_medical_test"):
@@ -991,14 +1107,13 @@ def main():
                                 st.rerun()
 
                 # Read Aloud (TTS)
-                st.markdown("---")
-                st.markdown("<h4 style='color:#38bdf8;'>🔊 Read Aloud / सुनकर समझें</h4>", unsafe_allow_html=True)
-                if st.button("🔊 Listen to Disease Overview", key="tts_dis_btn"):
-                    with st.spinner("Generating audio..."):
-                        speech = f"{data.get('disease_name')}. {data.get('description')}. Precautions: {'. '.join(data.get('precautions', [])[:2])}."
-                        ap = voice_service.text_to_speech(speech, lang_code=st.session_state.language, output_path="voice_disease.mp3")
-                        if ap and os.path.exists(ap):
-                            st.audio(ap, format="audio/mp3")
+                # Read Aloud (TTS)
+                dis_speech = f"{data.get('disease_name')}. {data.get('description')}. Precautions: {'. '.join(data.get('precautions', [])[:2])}."
+                render_read_aloud_widget(
+                    dis_speech,
+                    widget_key=f"dis_{data.get('disease_name', 'overview')[:10]}",
+                    label="🔊 Read Aloud Disease Overview / बीमारी की जानकारी सुनें"
+                )
 
     # ========================== TAB 3: DRUG INFORMATION ==========================
     with tab_drug:
@@ -1213,12 +1328,11 @@ def main():
                             st.error(f"Failed to save: {save_msg}")
 
             # Read Aloud
-            st.markdown("<h4 style='color:#38bdf8;'>🔊 Read Aloud</h4>", unsafe_allow_html=True)
-            if st.button("🔊 Listen to Drug Summary", key="tts_drug_btn"):
-                with st.spinner("Generating speech..."):
-                    ap = voice_service.text_to_speech(ans_text[:350], lang_code=st.session_state.language, output_path="voice_drug.mp3")
-                    if ap and os.path.exists(ap):
-                        st.audio(ap, format="audio/mp3")
+            render_read_aloud_widget(
+                ans_text,
+                widget_key="drug_summary",
+                label="🔊 Read Aloud Drug Summary / दवा की जानकारी सुनें"
+            )
 
     # ========================== TAB 4: MEDICAL REPORT ==========================
     with tab_report:
@@ -1343,13 +1457,8 @@ def main():
                             """, unsafe_allow_html=True)
 
                         # Read Aloud
-                        st.markdown("<h4 style='color:#38bdf8;'>🔊 Read Aloud</h4>", unsafe_allow_html=True)
-                        if st.button("🔊 Listen to Report Analysis", key="tts_report_btn"):
-                            with st.spinner("Generating speech..."):
-                                speech_rep = f"Report summary. {analysis.get('summary', '')}. Key problems: {', '.join(probs[:2])}."
-                                ap_rep = voice_service.text_to_speech(speech_rep[:350], lang_code=st.session_state.language, output_path="voice_rep.mp3")
-                                if ap_rep and os.path.exists(ap_rep):
-                                    st.audio(ap_rep, format="audio/mp3")
+                        speech_rep = f"Report summary. {analysis.get('summary', '')}. Key problems: {', '.join(probs[:3])}."
+                        render_read_aloud_widget(speech_rep, widget_key="report_analysis_tts", label="🔊 Read Aloud Report Analysis / रिपोर्ट की जानकारी सुनें")
 
                 except Exception as e:
                     st.error(f"Error analyzing report: {e}")
@@ -1444,15 +1553,10 @@ def main():
                             """, unsafe_allow_html=True)
 
                         # Read Aloud
-                        st.markdown("<h4 style='color:#38bdf8;'>🔊 Read Aloud</h4>", unsafe_allow_html=True)
-                        if st.button("🔊 Listen to Symptom Prediction", key="tts_sym_btn"):
-                            with st.spinner("Generating speech..."):
-                                top_dis = res_sym['predictions'][0]['disease'] if res_sym.get('predictions') else 'condition'
-                                top_c = res_sym['predictions'][0]['confidence'] if res_sym.get('predictions') else 50
-                                speech_sym = f"Symptom analysis results. Top possibility is {top_dis} with {top_c} percent confidence."
-                                ap_s = voice_service.text_to_speech(speech_sym, lang_code=st.session_state.language, output_path="voice_sym.mp3")
-                                if ap_s and os.path.exists(ap_s):
-                                    st.audio(ap_s, format="audio/mp3")
+                        top_dis = res_sym['predictions'][0]['disease'] if res_sym.get('predictions') else 'condition'
+                        top_c = res_sym['predictions'][0]['confidence'] if res_sym.get('predictions') else 50
+                        speech_sym = f"Symptom analysis results. Top possibility is {top_dis} with {top_c} percent confidence. Matched symptoms: {', '.join(res_sym.get('symptoms', []))}."
+                        render_read_aloud_widget(speech_sym, widget_key="symptom_prediction_tts", label="🔊 Read Aloud Prediction / लक्षण विश्लेषण सुनें")
 
                 except Exception as e:
                     st.error(f"Error checking symptoms: {e}")
