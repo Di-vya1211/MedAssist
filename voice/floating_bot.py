@@ -220,7 +220,7 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
         flex-direction: column !important;
         align-items: flex-end !important;
         gap: 8px !important;
-        pointer-events: auto !important;
+        pointer-events: none !important;
     }}
 
     /* Tooltip Speech Bubble Floating Above the Bot */
@@ -275,7 +275,7 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
         justify-content: center;
         transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
         user-select: none;
-        pointer-events: auto !important;
+        pointer-events: none !important;
     }}
 
     .bot-avatar-circle img {{
@@ -317,9 +317,9 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
         position: fixed !important;
         bottom: 25px !important;
         right: 25px !important;
-        width: 74px !important;
-        height: 74px !important;
-        z-index: 100000005 !important;
+        width: 76px !important;
+        height: 76px !important;
+        z-index: 100000050 !important;
         margin: 0 !important;
         padding: 0 !important;
         overflow: hidden !important;
@@ -327,11 +327,17 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
         animation: botFloatingBob 3s ease-in-out infinite !important;
     }}
 
+    body:has(div[data-testid="stDialog"]) div[data-testid="stElementContainer"]:has(#medassist-native-btn-marker) + div[data-testid="stElementContainer"],
+    body:has(div.stDialog) div[data-testid="stElementContainer"]:has(#medassist-native-btn-marker) + div[data-testid="stElementContainer"],
+    body:has(div[role="dialog"]) div[data-testid="stElementContainer"]:has(#medassist-native-btn-marker) + div[data-testid="stElementContainer"] {{
+        display: none !important;
+    }}
+
     div[data-testid="stElementContainer"]:has(#medassist-native-btn-marker) + div[data-testid="stElementContainer"] button {{
-        width: 74px !important;
-        height: 74px !important;
-        min-width: 74px !important;
-        min-height: 74px !important;
+        width: 76px !important;
+        height: 76px !important;
+        min-width: 76px !important;
+        min-height: 76px !important;
         border-radius: 50% !important;
         opacity: 0 !important;
         cursor: pointer !important;

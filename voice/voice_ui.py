@@ -11,6 +11,7 @@ Renders modern, open voice input in all modules:
 
 from typing import Optional, Dict, Any
 import re
+import urllib.parse
 import streamlit as st
 from voice.voice_service import voice_service
 
@@ -242,8 +243,8 @@ def render_read_aloud_widget(
     lang_code = forced_lang or ("hi" if is_hindi else "en")
     speech_lang_tag = "hi-IN" if is_hindi else "en-US"
 
-    # JS-safe escaped text
-    safe_js = speech_text.replace('\\', '\\\\').replace('"', '\\"').replace("'", "\\'").replace('\n', ' ')
+    # URL-encode text so JavaScript decodeURIComponent is 100% immune to quotes, newlines, and unicode symbols
+    encoded_js = urllib.parse.quote(speech_text)
 
     st.markdown(f"<h4 style='color:#38bdf8; margin: 14px 0 6px 0;'>{label}</h4>", unsafe_allow_html=True)
 
@@ -255,6 +256,7 @@ def render_read_aloud_widget(
                 audio_bytes = voice_service.text_to_speech_bytes(speech_text, lang_code=lang_code)
                 if audio_bytes:
                     st.session_state[f"_audio_cache_{widget_key}"] = audio_bytes
+                    st.rerun()
                 else:
                     st.info("Audio generation temporarily delayed. Please click '🗣️ Instant Speech' beside this button!")
 
@@ -269,7 +271,8 @@ def render_read_aloud_widget(
                     return;
                 }}
                 window.speechSynthesis.cancel();
-                var msg = new SpeechSynthesisUtterance('{safe_js}');
+                var text = decodeURIComponent('{encoded_js}');
+                var msg = new SpeechSynthesisUtterance(text);
                 msg.lang = '{speech_lang_tag}';
                 msg.rate = 0.95;
                 window.speechSynthesis.speak(msg);
@@ -289,4 +292,4 @@ def render_read_aloud_widget(
     # Display persistent player if audio was generated
     cached = st.session_state.get(f"_audio_cache_{widget_key}")
     if cached:
-        st.audio(cached, format="audio/mp3")
+        st.audio(cached, format="audio/mp3", autoplay=True)

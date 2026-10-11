@@ -18,6 +18,7 @@ class DrugQABackend:
         if path is None:
             base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             possible_paths = [
+                os.path.join(base, "data", "fda_drugs_essential.json"),
                 os.path.join(base, "data", "fda_drugs_bulk.jsonl"),
                 os.path.join(base, "data", "processed", "fda_drugs_bulk.jsonl"),
                 os.path.join(base, "fda_drugs_bulk.jsonl"),
@@ -28,10 +29,20 @@ class DrugQABackend:
                     break
 
         if not path or not os.path.exists(path):
-            print("[DrugQA] WARNING: fda_drugs_bulk.jsonl not found!")
+            print("[DrugQA] WARNING: No FDA drug database file found!")
             return
 
         try:
+            if path.endswith(".json"):
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        self.drugs = data
+                    elif isinstance(data, dict):
+                        self.drugs = list(data.values())
+                print(f"[DrugQA] Loaded {len(self.drugs)} essential drugs from {path}")
+                return
+
             count = 0
             MAX_DRUGS = 5000  # Cap in-memory drug database to avoid MemoryError on constrained machines
             with open(path, "r", encoding="utf-8") as f:

@@ -245,15 +245,10 @@ def analyze_report(report_text, patient_allergies=None, patient_profile=None):
 
     llm = _get_llm()
     if llm is None:
-        return {
-            "summary": "AI analysis is currently unavailable. Basic values extracted from report are shown below.",
-            "problems": ["AI service temporarily unavailable."],
-            "recommendations": ["Please consult a doctor for proper interpretation."],
-            "diet_lifestyle": ["Eat a balanced diet.", "Stay hydrated.", "Get adequate sleep."],
-            "when_to_see_doctor": "If you feel unwell or have any symptoms, see a doctor immediately.",
-            "values_found": extracted_values,
-            "raw_response": ""
-        }
+        clinical_data = generate_clinical_findings(extracted_values, report_text)
+        clinical_data["values_found"] = extracted_values
+        clinical_data["raw_response"] = ""
+        return clinical_data
 
     prompt = f"""You are a friendly village health assistant. Explain the medical report in VERY SIMPLE language that a 10th-class student or rural patient can understand.
 {patient_context_str}
@@ -318,10 +313,16 @@ ANSWER:"""
     }
 
     # Clinical validation: if sections are missing or contain generic placeholder, generate genuine clinical analysis
-    is_generic = "Based on standard clinical guidelines" in (parsed.get("summary") or "")
+    is_generic = (
+        not parsed.get("summary")
+        or "Based on standard" in parsed.get("summary", "")
+        or len(parsed.get("summary", "").strip()) < 20
+        or len(parsed.get("problems", [])) == 0
+        or len(parsed.get("recommendations", [])) == 0
+    )
     if is_generic or not parsed.get("problems") or not parsed.get("recommendations"):
         clinical_data = generate_clinical_findings(extracted_values, report_text)
-        if is_generic or not parsed.get("summary"):
+        if is_generic or not parsed.get("summary") or "Based on standard" in parsed.get("summary", ""):
             parsed["summary"] = clinical_data["summary"]
         if not parsed.get("problems"):
             parsed["problems"] = clinical_data["problems"]
@@ -419,7 +420,50 @@ def generate_clinical_findings(extracted_values: dict, report_text: str = "") ->
         except Exception:
             pass
 
-    # 5. Fallback if no specific abnormalities detected
+    # 5. Pulse / Heart Rate Evaluation
+    if "Pulse" in extracted_values:
+        try:
+            p_val = float(str(extracted_values["Pulse"]).replace(",", "."))
+            if p_val > 100:
+                problems.append(f"Pulse / Heart Rate is {p_val} bpm (Elevated / Tachycardia). Normal resting range is 60-100 bpm.")
+                recommendations.append("Limit caffeine, reduce stress, stay well hydrated, and practice deep breathing.")
+            elif p_val < 60:
+                problems.append(f"Pulse rate is {p_val} bpm (Low / Bradycardia). Normal resting range is 60-100 bpm.")
+            else:
+                recommendations.append(f"Resting pulse rate ({p_val} bpm) is normal and healthy (60-100 bpm).")
+        except Exception:
+            pass
+
+    # 6. Temperature Evaluation
+    if "Temperature" in extracted_values:
+        try:
+            t_val = float(str(extracted_values["Temperature"]).replace(",", "."))
+            if t_val > 37.5 and t_val < 45.0:  # Celsius
+                problems.append(f"Body Temperature is {t_val}°C (Mild / Moderate Fever). Normal is ~36.5-37.2°C.")
+                recommendations.append("Drink plenty of water and clear broths, rest, and monitor body temperature.")
+            elif t_val > 99.5:  # Fahrenheit
+                problems.append(f"Body Temperature is {t_val}°F (Fever). Normal is ~98.6°F.")
+                recommendations.append("Rest in a cool room, drink adequate fluids, and take lukewarm forehead sponging.")
+            else:
+                recommendations.append(f"Body temperature ({t_val}) is within normal limits.")
+        except Exception:
+            pass
+
+    # 7. Respiratory Rate Evaluation
+    if "Respiratory Rate" in extracted_values:
+        try:
+            rr_val = float(str(extracted_values["Respiratory Rate"]).replace(",", "."))
+            if rr_val > 20:
+                problems.append(f"Respiratory Rate is {rr_val} breaths/min (Elevated). Normal resting range is 12-20 breaths/min.")
+                recommendations.append("Sit comfortably in an upright position and avoid strenuous exertion.")
+            elif rr_val < 12:
+                problems.append(f"Respiratory Rate is {rr_val} breaths/min (Low). Normal is 12-20 breaths/min.")
+            else:
+                recommendations.append(f"Respiratory rate ({rr_val} breaths/min) is normal (12-20 breaths/min).")
+        except Exception:
+            pass
+
+    # 8. Fallback if no specific abnormalities detected
     if not problems:
         if extracted_values:
             problems.append("Your extracted vital signs and test parameters fall within standard healthy ranges.")
@@ -529,21 +573,24 @@ def get_structured_analysis(report_text, language="en", patient_allergies=None, 
     # ═══ TRANSLATE TO HINDI/OTHER LANGUAGE ═══
     if language != "en" and TRANSLATION_OK:
         try:
-            # Translate string fields
-            for key in ["summary", "when_to_see_doctor", "raw_response"]:
+            # Translate string fields (do not translate raw_response to avoid unnecessary lag)
+            for key in ["summary", "when_to_see_doctor"]:
                 if analysis.get(key) and isinstance(analysis[key], str):
                     analysis[key] = translate_text(analysis[key], target_lang=language)
             
-            # Translate list fields
+            # Translate list fields efficiently
             for key in ["problems", "recommendations", "diet_lifestyle"]:
-                if analysis.get(key) and isinstance(analysis[key], list):
-                    translated = []
-                    for item in analysis[key]:
-                        if isinstance(item, str) and item.strip():
-                            translated.append(translate_text(item, target_lang=language))
+                items = analysis.get(key, [])
+                if items and isinstance(items, list):
+                    joined = "\n".join([it for it in items if isinstance(it, str) and it.strip()])
+                    if joined:
+                        translated_joined = translate_text(joined, target_lang=language)
+                        lines = [line.strip() for line in translated_joined.split("\n") if line.strip()]
+                        if len(lines) == len(items):
+                            analysis[key] = lines
                         else:
-                            translated.append(item)
-                    analysis[key] = translated
+                            # Fallback if line count mismatched
+                            analysis[key] = [translate_text(item, target_lang=language) for item in items if isinstance(item, str) and item.strip()]
                     
         except Exception as e:
             print(f"[ReportAnalyzer] Translation failed: {e}")

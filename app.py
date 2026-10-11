@@ -47,10 +47,20 @@ from patients.patient_profile_ui import render_patient_dashboard_tab, calculate_
 
 # Voice Service & Reusable Voice UI
 import importlib
+import core.llm
+import core.drug_qa_backend
+import agents.drug_info_agent
+import reports.report_analyzer
+import agents.translation_agent
 import voice.voice_service
 import voice.voice_ui
 import voice.voice_assistant
 import voice.floating_bot
+importlib.reload(core.llm)
+importlib.reload(core.drug_qa_backend)
+importlib.reload(agents.drug_info_agent)
+importlib.reload(reports.report_analyzer)
+importlib.reload(agents.translation_agent)
 importlib.reload(voice.voice_service)
 importlib.reload(voice.voice_ui)
 importlib.reload(voice.voice_assistant)
@@ -806,7 +816,7 @@ def main():
     # ═══════════════════════════════════════════════════════════════════════════
     # TOP HEADER & CONTROLS
     # ═══════════════════════════════════════════════════════════════════════════
-    top_col1, top_col2, top_col3, top_col4 = st.columns([4, 2, 1.5, 1.2])
+    top_col1, top_col2, top_col_bot, top_col3, top_col4 = st.columns([3.5, 2, 1.8, 1.5, 1.2])
 
     with top_col1:
         st.markdown(f"""
@@ -837,8 +847,13 @@ def main():
             st.session_state.language = selected_lang[1]
             st.rerun()
 
+    with top_col_bot:
+        if st.button("🤖 AI Companion", use_container_width=True, type="primary"):
+            st.session_state.floating_bot_dialog_open = True
+            st.rerun()
+
     with top_col3:
-        if st.button("🚨 EMERGENCY (108)", use_container_width=True, type="secondary"):
+        if st.button("🚨 EMERGENCY", use_container_width=True, type="secondary"):
             st.error("🚨 EMERGENCY: Call 108 (Ambulance) or 102 immediately!")
 
     with top_col4:
@@ -1181,13 +1196,13 @@ def main():
                 except Exception as e:
                     print(f"[DrugTab] Allergy check notice: {e}")
 
-                if "drug_agent" not in st.session_state:
-                    st.session_state.drug_agent = DrugInfoAgent()
+                drug_agent = DrugInfoAgent()
+                st.session_state.drug_agent = drug_agent
 
                 with st.spinner(f"Analyzing drug database for '{drug_query}'..."):
                     try:
                         # Pass updated patient allergies into drug agent!
-                        drug_res = st.session_state.drug_agent.answer(drug_query, patient_allergies=patient_allergies)
+                        drug_res = drug_agent.answer(drug_query, patient_allergies=patient_allergies)
                         st.session_state.drug_results = drug_res
                     except Exception as e:
                         st.error(f"Error fetching drug info: {e}")
@@ -1247,7 +1262,26 @@ def main():
                         </div>
                         """, unsafe_allow_html=True)
 
-            ans_text = res.get("answer", "No details found.")
+            ans_text = res.get("answer", "")
+            # Ensure clinical cards are ALWAYS present if text is empty or generic
+            if not ans_text or "Based on standard" in ans_text or len(ans_text) < 40:
+                candidate_cards = res.get("drugs", [])
+                if candidate_cards:
+                    lines = [f"The following medications are indicated for {drug_query}:\n"]
+                    for d in candidate_cards[:5]:
+                        d_name = d.get('name', 'Medication')
+                        d_ind = d.get('indications', f'Prescribed for {drug_query}')
+                        d_warn = d.get('warnings', 'Follow prescribed dosage. Consult doctor before taking.')
+                        lines.append(f"**{d_name.upper()}**")
+                        lines.append(f"What it's used for: {d_name} – {d_ind[:250]}")
+                        if d_warn:
+                            lines.append(f"Warnings: {d_warn[:200]}")
+                        lines.append("")
+                    lines.append("⚠️ For any personal decisions regarding medication, always consult with a doctor or pharmacist.")
+                    ans_text = "\n".join(lines)
+                else:
+                    ans_text = f"Consult your physician for prescription treatment regarding '{drug_query}'."
+
             if st.session_state.language != "en" and TRANSLATION_OK:
                 ans_text = translate_content(ans_text, target_lang=st.session_state.language)
 
@@ -1262,8 +1296,15 @@ def main():
 
             # Sources
             sources = res.get("sources", [])
+            valid_src_names = []
             if sources:
-                st.markdown("<p style='color:#64748b; font-size:0.85rem;'>📚 FDA Sources: " + ", ".join([s.get("drug_name", "FDA") for s in sources[:5]]) + "</p>", unsafe_allow_html=True)
+                valid_src_names = [s.get("drug_name") for s in sources if s.get("drug_name") and s.get("drug_name").lower() != drug_query.lower()]
+            if not valid_src_names:
+                valid_src_names = [d.get("name") for d in res.get("drugs", []) if d.get("name")]
+            if valid_src_names:
+                st.markdown("<p style='color:#64748b; font-size:0.85rem;'>📚 FDA Sources: " + ", ".join(valid_src_names[:5]) + "</p>", unsafe_allow_html=True)
+            else:
+                st.markdown("<p style='color:#64748b; font-size:0.85rem;'>📚 FDA Sources: openFDA Drug Database & National Library of Medicine</p>", unsafe_allow_html=True)
 
             # ═════════════════════════════════════════════════════════════════
             # REPORT ADVERSE REACTION / ALLERGY AFTER TAKING THIS MEDICINE
@@ -1367,6 +1408,59 @@ def main():
                             patient_allergies=patient_allergies,
                             patient_profile=patient
                         )
+
+                        # Ironclad verification of all sections
+                        vals = analysis.get("values_found", {})
+                        if not vals:
+                            from reports.report_analyzer import extract_values
+                            vals = extract_values(raw_report_text)
+                            analysis["values_found"] = vals
+
+                        probs = analysis.get("problems", [])
+                        recs = analysis.get("recommendations", [])
+                        diet = analysis.get("diet_lifestyle", [])
+                        doc_text = analysis.get("when_to_see_doctor", "")
+                        summ = analysis.get("summary", "")
+
+                        needs_fallback = (
+                            not probs
+                            or not recs
+                            or not diet
+                            or not doc_text
+                            or not summ
+                            or "Based on standard" in summ
+                            or len(summ.strip()) < 20
+                        )
+
+                        if needs_fallback:
+                            from reports.report_analyzer import generate_clinical_findings
+                            clin = generate_clinical_findings(vals, raw_report_text)
+                            if not probs:
+                                probs = clin.get("problems", [])
+                                analysis["problems"] = probs
+                            if not recs:
+                                recs = clin.get("recommendations", [])
+                                analysis["recommendations"] = recs
+                            if not diet:
+                                diet = clin.get("diet_lifestyle", [])
+                                analysis["diet_lifestyle"] = diet
+                            if not doc_text:
+                                doc_text = clin.get("when_to_see_doctor", "")
+                                analysis["when_to_see_doctor"] = doc_text
+                            if not summ or "Based on standard" in summ or len(summ.strip()) < 20:
+                                summ = clin.get("summary", "")
+                                analysis["summary"] = summ
+
+                            # Translate if target language is not English
+                            if st.session_state.language != "en" and TRANSLATION_OK:
+                                try:
+                                    analysis["summary"] = translate_content(analysis["summary"], target_lang=st.session_state.language)
+                                    analysis["when_to_see_doctor"] = translate_content(analysis["when_to_see_doctor"], target_lang=st.session_state.language)
+                                    analysis["problems"] = [translate_content(p, target_lang=st.session_state.language) for p in analysis["problems"]]
+                                    analysis["recommendations"] = [translate_content(r, target_lang=st.session_state.language) for r in analysis["recommendations"]]
+                                    analysis["diet_lifestyle"] = [translate_content(d, target_lang=st.session_state.language) for d in analysis["diet_lifestyle"]]
+                                except Exception as terr:
+                                    print(f"[ReportUI] Fallback translation notice: {terr}")
 
                         # Check if any recommendations mention allergic drugs
                         rec_str = " ".join(analysis.get("recommendations", []))

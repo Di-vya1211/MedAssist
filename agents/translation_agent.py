@@ -75,10 +75,12 @@ def _get_llm_translator():
     return _llm_translator if _llm_translator else None
 
 
+_translation_cache = {}
+
 def translate_with_llm(text: str, target_lang: str = "hi") -> str:
     """Translates text using LLM when GoogleTranslator fails."""
     llm = _get_llm_translator()
-    if not llm or not text:
+    if not llm or not text or len(text.strip()) < 2:
         return text
     lang_names = {
         "hi": "Hindi", "bn": "Bengali", "ta": "Tamil", "te": "Telugu",
@@ -87,29 +89,46 @@ def translate_with_llm(text: str, target_lang: str = "hi") -> str:
     }
     lang_name = lang_names.get(target_lang, "Hindi")
     prompt = (
-        f"Translate the following medical health text into simple, natural {lang_name}. "
-        f"Output ONLY the translated text without markdown wrappers, explanations, or quotes:\n\n{text}"
+        f"You are a medical translator. Translate the following medical health text into simple, natural {lang_name} (हिन्दी).\n"
+        f"Keep medicine brand names and scientific drug names in English in brackets if helpful.\n"
+        f"Output ONLY the translated text without explanations, headers, or quotes:\n\n{text}"
     )
     try:
         translated = llm.generate(prompt).strip()
-        return translated if translated else text
+        # Verify translation didn't return an error message or placeholder
+        if translated and len(translated) >= 3:
+            if not any(bad in translated for bad in ["Based on standard", "LLM service currently unavailable", "RuntimeError", "error occurred"]):
+                return translated
+        return text
     except Exception as e:
-        print(f"[translation_agent] LLM fallback translation error: {e}")
+        print(f"[translation_agent] LLM fallback translation notice: {e}")
         return text
 
 
 def translate_text(text: str, target_lang: str = "hi") -> str:
     """
     Translates a single string into the target language.
-    Tries GoogleTranslator first; falls back to LLM, then to original text.
+    Tries GoogleTranslator first; falls back to LLM, then safely preserves original text.
     """
-    if not text or target_lang == "en":
+    if not text or target_lang == "en" or not str(text).strip():
         return text
+
+    clean_str = str(text).strip()
+    cache_key = (clean_str, target_lang)
+    if cache_key in _translation_cache:
+        return _translation_cache[cache_key]
+
+    result = clean_str
     try:
-        return GoogleTranslator(source="auto", target=target_lang).translate(text)
+        translated = GoogleTranslator(source="auto", target=target_lang).translate(clean_str)
+        if translated and str(translated).strip():
+            result = translated
     except Exception as e:
-        print(f"[translation_agent] GoogleTranslator failed ({e}), using LLM fallback...")
-        return translate_with_llm(text, target_lang=target_lang)
+        print(f"[translation_agent] GoogleTranslator notice ({e}), trying LLM...")
+        result = translate_with_llm(clean_str, target_lang=target_lang)
+
+    _translation_cache[cache_key] = result
+    return result
 
 
 def translate_pipeline_output(pipeline_output: dict, target_lang: str = "hi") -> dict:
