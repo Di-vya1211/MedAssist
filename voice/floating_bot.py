@@ -48,7 +48,12 @@ def init_floating_bot_state():
         ]
 
 
-@st.dialog("🤖 MedAssist AI Companion", width="small")
+def on_floating_bot_dialog_dismiss():
+    """Resets dialog open state when dismissed via X button or backdrop click."""
+    st.session_state.floating_bot_dialog_open = False
+
+
+@st.dialog("🤖 MedAssist AI Companion", width="small", on_dismiss=on_floating_bot_dialog_dismiss)
 def open_medassist_bot_dialog(patient_id: Optional[int] = None, patient_db = None):
     """
     Interactive clinical dialogue modal where the 3D robot greets the patient
@@ -303,18 +308,34 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
         }}
     }}
 
-    /* Move the native Streamlit button off-screen; clicks are dispatched by our toggle handler */
+    /* Position the native Streamlit button layer right on top of the 72px robot */
     div[data-testid="stElementContainer"]:has(#medassist-native-btn-marker) + div[data-testid="stElementContainer"] {{
         position: fixed !important;
-        bottom: -500px !important;
-        right: -500px !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
+        bottom: 25px !important;
+        right: 25px !important;
+        width: 74px !important;
+        height: 74px !important;
+        z-index: 100000005 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        border-radius: 50% !important;
+        animation: botFloatingBob 3s ease-in-out infinite !important;
     }}
 
     div[data-testid="stElementContainer"]:has(#medassist-native-btn-marker) + div[data-testid="stElementContainer"] button {{
+        width: 74px !important;
+        height: 74px !important;
+        min-width: 74px !important;
+        min-height: 74px !important;
+        border-radius: 50% !important;
         opacity: 0 !important;
-        pointer-events: none !important;
+        cursor: pointer !important;
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        pointer-events: auto !important;
     }}
 
     /* ========================================================
@@ -436,16 +457,20 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
     </style>
 
     <div id="medassist-bot-container">
-        <div class="bot-speech-bubble" onclick="(function(e){{ if(e){{ e.preventDefault(); e.stopPropagation(); }} var closeBtn = document.querySelector('div[data-testid=\'stDialog\'] button[aria-label=\'Close\'], div.stDialog button[aria-label=\'Close\'], div[role=\'dialog\'] button[aria-label=\'Close\'], button[aria-label=\'Close\'], .e1mymz5c3'); var dialogCard = document.querySelector('div[data-testid=\'stDialog\'] > div, div.stDialog > div, div[role=\'dialog\'], .e1mymz5c1'); if(dialogCard && closeBtn){{ closeBtn.click(); }} else {{ var openBtn = Array.from(document.querySelectorAll('button')).find(function(b){{ return b.textContent && b.textContent.indexOf('MEDASSIST_BOT_CLICK_ACTION') !== -1; }}); if(openBtn) openBtn.click(); }} }})(event)">
+        <div class="bot-speech-bubble" onclick="(function(){{ var b = Array.from(document.querySelectorAll('button')).find(function(x){{ return x.textContent && x.textContent.indexOf('MEDASSIST_BOT_CLICK_ACTION') !== -1; }}); if(b) b.click(); }})()">
             {speech_text}
         </div>
-        <div class="bot-avatar-circle" title="Click to chat with MedAssist AI" onclick="(function(e){{ if(e){{ e.preventDefault(); e.stopPropagation(); }} var closeBtn = document.querySelector('div[data-testid=\'stDialog\'] button[aria-label=\'Close\'], div.stDialog button[aria-label=\'Close\'], div[role=\'dialog\'] button[aria-label=\'Close\'], button[aria-label=\'Close\'], .e1mymz5c3'); var dialogCard = document.querySelector('div[data-testid=\'stDialog\'] > div, div.stDialog > div, div[role=\'dialog\'], .e1mymz5c1'); if(dialogCard && closeBtn){{ closeBtn.click(); }} else {{ var openBtn = Array.from(document.querySelectorAll('button')).find(function(b){{ return b.textContent && b.textContent.indexOf('MEDASSIST_BOT_CLICK_ACTION') !== -1; }}); if(openBtn) openBtn.click(); }} }})(event)">
+        <div class="bot-avatar-circle" title="Click to chat with MedAssist AI">
             <img src="data:image/png;base64,{b64}" alt="MedAssist AI Bot" />
         </div>
     </div>
     """)
 
-    # Native Streamlit clickable button anchor and button
+    # Native Streamlit clickable button anchor and button (Handles pure-python open/close toggle)
     st.markdown('<div id="medassist-native-btn-marker" style="display:none;"></div>', unsafe_allow_html=True)
     if st.button("MEDASSIST_BOT_CLICK_ACTION", key="medassist_native_floating_btn"):
+        st.session_state.floating_bot_dialog_open = not st.session_state.get("floating_bot_dialog_open", False)
+        st.rerun()
+
+    if st.session_state.get("floating_bot_dialog_open", False):
         open_medassist_bot_dialog(patient_id, patient_db)
