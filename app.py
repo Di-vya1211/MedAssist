@@ -415,53 +415,86 @@ st.markdown("""
     /* ========================================================
        FLOATING AI BOT DIALOG AS SIDE SQUARE CARD (BOTTOM-RIGHT)
        ======================================================== */
-    /* 1. Remove fullscreen dark backdrop dimming so the entire dashboard stays bright & visible */
+    /* 1. Backdrop / Outer Flex Container: Fullscreen, transparent, aligns content to bottom-right */
     div[data-baseweb="modal"],
-    div[data-baseweb="modal"] > div {
-        background-color: transparent !important;
+    div[data-baseweb="modal"] > div,
+    div[data-testid="stDialog"],
+    div.stDialog,
+    .e1mymz5c0 {
+        position: fixed !important;
+        inset: 0 !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
         background: transparent !important;
+        background-color: transparent !important;
+        display: flex !important;
+        align-items: flex-end !important;
+        justify-content: flex-end !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        z-index: 99999999 !important;
     }
 
-    /* 2. Position the dialog as a compact, floating card in the bottom-right corner */
-    div[data-testid="stDialog"],
-    div[role="dialog"] {
+    /* 2. Inner Dialog Card: Fixed at bottom-right corner directly above the 3D bot */
+    div[data-testid="stDialog"] > div,
+    div.stDialog > div,
+    div[role="dialog"],
+    .e1mymz5c1 {
         position: fixed !important;
         bottom: 105px !important;
         right: 25px !important;
+        inset: auto !important;
+        top: auto !important;
+        left: auto !important;
         margin: 0 !important;
-        width: 420px !important;
+        width: 410px !important;
         max-width: calc(100vw - 35px) !important;
-        height: 560px !important;
+        height: 550px !important;
         max-height: calc(100vh - 125px) !important;
+        background: #0b1120 !important;
         background-color: #0b1120 !important;
-        border: 2px solid rgba(56, 189, 248, 0.45) !important;
+        border: 2px solid #38bdf8 !important;
         border-radius: 20px !important;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 25px rgba(56, 189, 248, 0.3) !important;
-        z-index: 99999999 !important;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95), 0 0 30px rgba(56, 189, 248, 0.4) !important;
         overflow-y: auto !important;
-        padding: 1.2rem 1.3rem !important;
-        animation: botCardSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        padding: 1.15rem 1.3rem !important;
+        display: flex !important;
+        flex-direction: column !important;
+        pointer-events: auto !important;
+        transform-origin: bottom right !important;
+        animation: botPopupFromBot 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
     }
 
-    @keyframes botCardSlideUp {
-        from {
+    /* Pop out directly from the bottom-right 3D bot */
+    @keyframes botPopupFromBot {
+        0% {
             opacity: 0;
-            transform: translateY(20px) scale(0.96);
+            transform: scale(0.12) translateY(80px) translateX(40px);
         }
-        to {
+        70% {
             opacity: 1;
-            transform: translateY(0) scale(1);
+            transform: scale(1.03) translateY(-4px) translateX(-2px);
+        }
+        100% {
+            opacity: 1;
+            transform: scale(1) translateY(0) translateX(0);
         }
     }
 
     /* 3. Hide floating speech bubble when dialog is open so they do not overlap */
     body:has(div[data-testid="stDialog"]) .bot-speech-bubble,
+    body:has(div.stDialog) .bot-speech-bubble,
     body:has(div[role="dialog"]) .bot-speech-bubble {
         display: none !important;
     }
 
     /* 4. Compact dialog header & stylish close button */
     div[data-testid="stDialog"] h2,
+    div.stDialog h2,
     div[role="dialog"] h2 {
         font-size: 1.05rem !important;
         margin: 0 !important;
@@ -471,7 +504,9 @@ st.markdown("""
     }
 
     div[data-testid="stDialog"] button[aria-label="Close"],
-    div[role="dialog"] button[aria-label="Close"] {
+    div.stDialog button[aria-label="Close"],
+    div[role="dialog"] button[aria-label="Close"],
+    .e1mymz5c3 {
         color: #94a3b8 !important;
         top: 14px !important;
         right: 14px !important;
@@ -481,19 +516,25 @@ st.markdown("""
     }
 
     div[data-testid="stDialog"] button[aria-label="Close"]:hover,
-    div[role="dialog"] button[aria-label="Close"]:hover {
+    div.stDialog button[aria-label="Close"]:hover,
+    div[role="dialog"] button[aria-label="Close"]:hover,
+    .e1mymz5c3:hover {
         color: #f43f5e !important;
         background: rgba(244, 63, 94, 0.15) !important;
         transform: scale(1.1) !important;
     }
 
     /* 5. Custom scrollbar for the dialog card */
-    div[data-testid="stDialog"]::-webkit-scrollbar,
-    div[role="dialog"]::-webkit-scrollbar {
+    div[data-testid="stDialog"] > div::-webkit-scrollbar,
+    div.stDialog > div::-webkit-scrollbar,
+    div[role="dialog"]::-webkit-scrollbar,
+    .e1mymz5c1::-webkit-scrollbar {
         width: 6px !important;
     }
-    div[data-testid="stDialog"]::-webkit-scrollbar-thumb,
-    div[role="dialog"]::-webkit-scrollbar-thumb {
+    div[data-testid="stDialog"] > div::-webkit-scrollbar-thumb,
+    div.stDialog > div::-webkit-scrollbar-thumb,
+    div[role="dialog"]::-webkit-scrollbar-thumb,
+    .e1mymz5c1::-webkit-scrollbar-thumb {
         background: rgba(56, 189, 248, 0.3) !important;
         border-radius: 10px !important;
     }
