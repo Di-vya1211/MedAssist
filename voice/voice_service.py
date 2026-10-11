@@ -121,7 +121,7 @@ class VoiceService:
                 text = (transcription.text or "").strip()
                 detected_lang = getattr(transcription, "language", effective_hint) or effective_hint
 
-                # If English was hinted and text is mostly Latin characters, keep English
+                # If English was hinted, enforce clean English text and language code
                 if effective_hint == "en":
                     HINDI_TO_EN_QUICK = {
                         "डायबिटीज": "Diabetes", "डायबटीज": "Diabetes", "मधुमेह": "Diabetes", "शुगर": "Diabetes",
@@ -132,6 +132,15 @@ class VoiceService:
                     for hi_k, en_k in HINDI_TO_EN_QUICK.items():
                         if hi_k in text:
                             text = text.replace(hi_k, en_k)
+                    if any(ord(c) > 127 for c in text):
+                        try:
+                            from agents.translation_agent import translate_text
+                            en_res = translate_text(text, target_lang="en")
+                            if en_res and en_res.strip():
+                                text = en_res.strip()
+                        except Exception:
+                            pass
+                    return True, text, "en"
 
                 lang_code = self.detect_language(text, hinted_lang=effective_hint)
                 if text:
@@ -148,7 +157,7 @@ class VoiceService:
                 audio_data = recognizer.record(source)
 
             # Order recognition attempts based on active language
-            lang_order = ["hi-IN", "en-IN"] if effective_hint == "hi" else ["en-IN", "en-US", "hi-IN"]
+            lang_order = ["hi-IN", "en-IN"] if effective_hint == "hi" else ["en-IN", "en-US"]
 
             for speech_lang in lang_order:
                 try:
@@ -164,6 +173,15 @@ class VoiceService:
                             for hi_k, en_k in HINDI_TO_EN_QUICK.items():
                                 if hi_k in text:
                                     text = text.replace(hi_k, en_k)
+                            if any(ord(c) > 127 for c in text):
+                                try:
+                                    from agents.translation_agent import translate_text
+                                    en_res = translate_text(text, target_lang="en")
+                                    if en_res and en_res.strip():
+                                        text = en_res.strip()
+                                except Exception:
+                                    pass
+                            return True, text, "en"
 
                         primary_code = "hi" if "hi" in speech_lang else "en"
                         lang = self.detect_language(text, hinted_lang=effective_hint or primary_code)

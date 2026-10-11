@@ -50,6 +50,7 @@ import importlib
 for _mod_name in [
     "core.llm", "core.drug_qa_backend", "agents.drug_info_agent",
     "reports.report_analyzer", "agents.translation_agent",
+    "disease_info_module_complete.disease_info",
     "voice.voice_service", "voice.voice_ui", "voice.voice_assistant",
     "voice.floating_bot"
 ]:
@@ -395,8 +396,31 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# Handle query params for test selection
+# Handle query params for test selection and live speech input
 query_params = st.query_params
+if "live_voice_text" in query_params:
+    import urllib.parse
+    raw_v = query_params["live_voice_text"]
+    v_text = urllib.parse.unquote(raw_v).strip()
+    v_mod = query_params.get("live_voice_module", "disease")
+    if v_text:
+        if v_mod == "disease":
+            st.session_state.disease_input = v_text
+            st.session_state.disease_text_field = v_text
+            st.session_state._trigger_disease = True
+        elif v_mod == "drug":
+            st.session_state.drug_search = v_text
+            st.session_state.drug_text_input = v_text
+            st.session_state._trigger_drug = True
+        elif v_mod == "symptoms":
+            st.session_state.symptom_input = v_text
+            st.session_state.symp_area = v_text
+            st.session_state._trigger_symptom = True
+    del st.query_params["live_voice_text"]
+    if "live_voice_module" in st.query_params:
+        del st.query_params["live_voice_module"]
+    st.rerun()
+
 if "selected_test" in query_params:
     raw_key = query_params["selected_test"]
     if raw_key in medical_tests_db:

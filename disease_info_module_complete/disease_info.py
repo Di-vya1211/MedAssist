@@ -24,9 +24,15 @@ for _env_path in [
         print(f"[DiseaseInfo] Loaded .env from: {_env_path}")
         break
 
-import chromadb
-from chromadb.config import Settings
-from sentence_transformers import SentenceTransformer
+try:
+    import chromadb
+    from chromadb.config import Settings
+    CHROMADB_OK = True
+except Exception as e:
+    print(f"[DiseaseInfo] ChromaDB import notice: {e}")
+    CHROMADB_OK = False
+
+SentenceTransformer = None
 
 # LLM imports
 try:
@@ -223,7 +229,12 @@ class DiseaseInfoRetriever:
 
     def _get_embedder(self):
         if self._embedder is None:
-            self._embedder = SentenceTransformer("all-MiniLM-L6-v2")
+            try:
+                from sentence_transformers import SentenceTransformer
+                self._embedder = SentenceTransformer("all-MiniLM-L6-v2")
+            except Exception as e:
+                print(f"[DiseaseInfo] SentenceTransformer load notice: {e}. Falling back to keyword search.")
+                self._embedder = None
         return self._embedder
 
     # ===== DRUG LABEL FILTER =====
@@ -303,6 +314,8 @@ class DiseaseInfoRetriever:
             return self._keyword_search(canonical_name)
 
         embedder = self._get_embedder()
+        if not embedder:
+            return self._keyword_search(canonical_name)
 
         query_variations = [
             f"{canonical_name} disease symptoms diagnosis treatment",
