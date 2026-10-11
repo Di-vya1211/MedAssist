@@ -193,28 +193,31 @@ class VoiceService:
         try:
             import speech_recognition as sr
             recognizer = sr.Recognizer()
-            recognizer.energy_threshold = 300
+            recognizer.energy_threshold = 200
             recognizer.dynamic_energy_threshold = True
+            recognizer.pause_threshold = 0.8
+            recognizer.non_speaking_duration = 0.5
 
             audio_data = None
-            mic_indices = [None]
+            candidate_indices = []
             try:
                 names = sr.Microphone.list_microphone_names()
                 for idx, n in enumerate(names):
                     nl = n.lower()
-                    if ("realtek" in nl or "microphone array" in nl or "mic in" in nl or "built-in" in nl) and "hands-free" not in nl:
-                        mic_indices.append(idx)
+                    if "microphone" in nl and "realtek" in nl and "array" not in nl:
+                        candidate_indices.append(idx)
             except Exception:
                 pass
+            candidate_indices.append(None)  # Default fallback
 
-            for dev_idx in mic_indices:
+            for dev_idx in candidate_indices:
                 try:
                     with sr.Microphone(device_index=dev_idx) as source:
-                        recognizer.adjust_for_ambient_noise(source, duration=0.3)
+                        recognizer.adjust_for_ambient_noise(source, duration=0.2)
                         audio_data = recognizer.listen(source, timeout=timeout, phrase_time_limit=phrase_time_limit)
                     if audio_data:
                         break
-                except Exception:
+                except Exception as me:
                     continue
 
             if not audio_data:

@@ -86,61 +86,18 @@ def render_voice_input_widget(
     </div>
     """, unsafe_allow_html=True)
 
-    col1, col2 = st.columns([3, 2])
+    col_live, col_alt = st.columns([3, 2])
 
-    # 1. Browser-based Audio Input
-    with col1:
-        st.markdown("<p style='color:#cbd5e1; font-size:0.8rem; font-weight:600; margin-bottom:4px;'>Web Audio (Browser):</p>", unsafe_allow_html=True)
-        audio_data = st.audio_input(
-            f"Record Voice ({module_key})",
-            key=f"audio_input_{module_key}_{audio_ver}",
-            label_visibility="collapsed"
-        )
-
-        if audio_data is not None:
-            audio_cache_key = f"_last_audio_{module_key}"
-            current_bytes = audio_data.getvalue()
-
-            # Process only if new audio
-            if st.session_state.get(audio_cache_key) != current_bytes:
-                st.session_state[audio_cache_key] = current_bytes
-
-                user_active_lang = st.session_state.get("language", "en")
-                with st.spinner("🎙️ Transcribing speech & detecting language..."):
-                    success, text, lang_code = voice_service.transcribe_audio_bytes(current_bytes, filename=f"{module_key}.wav", hinted_lang=user_active_lang)
-
-                    if success and text:
-                        lang_label = "हिन्दी (Hindi)" if lang_code == "hi" else "English"
-
-                        # If user spoke an allergy in Drug Info or elsewhere
-                        if patient_id and patient_db:
-                            try:
-                                from voice.voice_assistant import conversational_assistant
-                                is_allg, allg_data = conversational_assistant.check_and_record_allergy_from_text(
-                                    text, patient_id=patient_id, patient_db=patient_db
-                                )
-                                if is_allg and allg_data:
-                                    st.session_state[f"allergy_flash_{module_key}"] = allg_data
-                            except Exception as e:
-                                print(f"[VoiceUI] Allergy check error: {e}")
-
-                        st.session_state[f"last_voice_{module_key}"] = (text, lang_label)
-                        st.session_state[target_state_key] = text
-                        if module_key in widget_map:
-                            st.session_state[widget_map[module_key]] = text
-                        if trigger_state_key:
-                            st.session_state[trigger_state_key] = True
-                        st.rerun()
-                    else:
-                        st.warning("Could not clearly transcribe speech. Please try speaking closer to the microphone.")
-
-    # 2. Live PC Microphone Button
-    with col2:
-        st.markdown("<p style='color:#cbd5e1; font-size:0.8rem; font-weight:600; margin-bottom:4px;'>Direct PC Mic:</p>", unsafe_allow_html=True)
-        if st.button("🎤 Record PC Mic (6s)", key=f"pc_mic_btn_{module_key}", use_container_width=True):
-            user_active_lang = st.session_state.get("language", "en")
-            with st.spinner("🎤 Listening from PC mic (6s)... Speak in Hindi or English"):
-                success, text, lang_code = voice_service.record_live_microphone(timeout=6, phrase_time_limit=8, hinted_lang=user_active_lang)
+    # 1. Primary Live Microphone Button
+    with col_live:
+        user_active_lang = st.session_state.get("language", "en")
+        btn_label = "🎙️ Live Microphone / लाइव बोलें" if user_active_lang == "hi" else "🎙️ Live Microphone (Click & Speak)"
+        if st.button(btn_label, key=f"live_mic_btn_{module_key}", use_container_width=True, type="primary"):
+            lang_prompt = "Speak in English or Hindi" if user_active_lang == "en" else "हिन्दी या English में बोलिए"
+            with st.spinner(f"🔴 Live Microphone Active... {lang_prompt}..."):
+                success, text, lang_code = voice_service.record_live_microphone(
+                    timeout=5, phrase_time_limit=8, hinted_lang=user_active_lang
+                )
 
                 if success and text:
                     lang_label = "हिन्दी (Hindi)" if lang_code == "hi" else "English"
@@ -164,7 +121,53 @@ def render_voice_input_widget(
                         st.session_state[trigger_state_key] = True
                     st.rerun()
                 else:
-                    st.warning("⚠️ PC hardware mic could not record. Please use the '🎙️ Web Audio' widget on the left to record directly via your browser!")
+                    st.warning("⚠️ Microphone could not capture speech. Please ensure mic permissions are allowed and try speaking again!")
+
+    # 2. Secondary Browser Audio File / Recording
+    with col_alt:
+        with st.popover("📁 Browser Audio Clip (वैकल्पिक)", use_container_width=True):
+            st.markdown("<p style='color:#94a3b8; font-size:0.8rem; margin:0 0 4px 0;'>Record or upload an audio clip via browser:</p>", unsafe_allow_html=True)
+            audio_data = st.audio_input(
+                f"Audio ({module_key})",
+                key=f"audio_input_{module_key}_{audio_ver}",
+                label_visibility="collapsed"
+            )
+
+            if audio_data is not None:
+                audio_cache_key = f"_last_audio_{module_key}"
+                current_bytes = audio_data.getvalue()
+
+                if st.session_state.get(audio_cache_key) != current_bytes:
+                    st.session_state[audio_cache_key] = current_bytes
+
+                    with st.spinner("🎙️ Transcribing audio clip..."):
+                        success, text, lang_code = voice_service.transcribe_audio_bytes(
+                            current_bytes, filename=f"{module_key}.wav", hinted_lang=user_active_lang
+                        )
+
+                        if success and text:
+                            lang_label = "हिन्दी (Hindi)" if lang_code == "hi" else "English"
+
+                            if patient_id and patient_db:
+                                try:
+                                    from voice.voice_assistant import conversational_assistant
+                                    is_allg, allg_data = conversational_assistant.check_and_record_allergy_from_text(
+                                        text, patient_id=patient_id, patient_db=patient_db
+                                    )
+                                    if is_allg and allg_data:
+                                        st.session_state[f"allergy_flash_{module_key}"] = allg_data
+                                except Exception as e:
+                                    print(f"[VoiceUI] Allergy check error: {e}")
+
+                            st.session_state[f"last_voice_{module_key}"] = (text, lang_label)
+                            st.session_state[target_state_key] = text
+                            if module_key in widget_map:
+                                st.session_state[widget_map[module_key]] = text
+                            if trigger_state_key:
+                                st.session_state[trigger_state_key] = True
+                            st.rerun()
+                        else:
+                            st.warning("Could not transcribe audio clip.")
 
     # Show transcription feedback banner with Cancel / Clear button
     voice_info = st.session_state.get(f"last_voice_{module_key}")
