@@ -31,6 +31,15 @@ load_dotenv(os.path.join(BASE_DIR, 'config', '.env'))
 
 import streamlit as st
 
+# Automatically sync Streamlit Cloud Secrets into os.environ for cloud deployments
+try:
+    if hasattr(st, "secrets"):
+        for _sec_key, _sec_val in st.secrets.items():
+            if isinstance(_sec_val, str) and _sec_key not in os.environ:
+                os.environ[_sec_key] = _sec_val
+except Exception:
+    pass
+
 # Patient Authentication & Database
 from patients.patient_auth import render_auth, get_patient_db, show_patient_header
 from patients.patient_db import PatientDatabase
@@ -80,13 +89,13 @@ except Exception as e:
     import_errors.append(f"translation_agent: {str(e)}")
     TRANSLATION_OK = False
 
-# Voice Output (TTS)
+# Wellness Hub
 try:
-    from voice.voice_output_agent import VoiceOutputAgent
-    TTS_AVAILABLE = True
+    from wellness.wellness_ui import render_wellness_hub_tab
+    WELLNESS_MODULE_OK = True
 except Exception as e:
-    TTS_AVAILABLE = False
-    print(f"[TTS] Not available: {e}")
+    import_errors.append(f"wellness_ui: {str(e)}")
+    WELLNESS_MODULE_OK = False
 
 # ═══════════════════════════════════════════════════════════════════════════
 # MEDICAL TESTS DATABASE
@@ -750,12 +759,13 @@ def main():
     # ═══════════════════════════════════════════════════════════════════════════
     # MAIN APP TABS
     # ═══════════════════════════════════════════════════════════════════════════
-    tab_profile, tab_disease, tab_drug, tab_report, tab_symptom = st.tabs([
+    tab_profile, tab_disease, tab_drug, tab_report, tab_symptom, tab_wellness = st.tabs([
         "🏠 Dashboard & Profile",
         "🔍 Disease Info",
         "💊 Drug Information",
         "📄 Medical Report",
-        "🩺 Symptom Checker"
+        "🩺 Symptom Checker",
+        "🌿 Wellness Hub"
     ])
 
     # ========================== TAB 1: DASHBOARD & PROFILE ==========================
@@ -1446,6 +1456,13 @@ def main():
 
                 except Exception as e:
                     st.error(f"Error checking symptoms: {e}")
+
+    # ========================== TAB 6: WELLNESS HUB ==========================
+    with tab_wellness:
+        if WELLNESS_MODULE_OK:
+            render_wellness_hub_tab(patient_id=patient_id, patient_db=db)
+        else:
+            st.error("Wellness Hub module is currently unavailable.")
 
     # ═══════════════════════════════════════════════════════════════════════════
     # FOOTER

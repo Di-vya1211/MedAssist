@@ -109,5 +109,5 @@ data/chroma_db/
 data/chroma_rag_db/ 
 data/vector_db/ 
 __pycache__/ 
-*/__pycache__/ 
 voice/audio_samples/ 
+scratch/

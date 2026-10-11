@@ -67,6 +67,7 @@ def render_voice_input_widget(
         "drug": "drug_text_input",
         "symptoms": "symp_area",
         "report": "report_voice_query",
+        "wellness": "wellness_search_input",
     }
 
     st.markdown(f"""

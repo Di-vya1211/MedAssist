@@ -22,6 +22,16 @@ else:
     load_dotenv()  # fallback to current dir
     print(f"[LLM] WARNING: {ENV_PATH} not found, trying default .env")
 
+# Automatically sync Streamlit Cloud Secrets into os.environ
+try:
+    import streamlit as st
+    if hasattr(st, "secrets"):
+        for _sec_key, _sec_val in st.secrets.items():
+            if isinstance(_sec_val, str) and _sec_key not in os.environ:
+                os.environ[_sec_key] = _sec_val
+except Exception:
+    pass
+
 class LLMProvider(Enum):
     TINYLLAMA = "tinyllama"
     GROQ = "groq"
