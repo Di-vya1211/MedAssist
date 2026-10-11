@@ -413,67 +413,13 @@ st.markdown("""
     }
 
     /* ========================================================
-       FLOATING AI HEALTH BOT (BOTTOM-RIGHT CORNER)
+       MODAL DIALOG STYLING FOR MEDASSIST AI BOT
        ======================================================== */
-    div[data-testid="stPopover"] {
-        position: fixed !important;
-        bottom: 24px !important;
-        right: 24px !important;
-        z-index: 999999 !important;
-    }
-    div[data-testid="stPopover"] > button {
-        display: inline-flex !important;
-        align-items: center !important;
-        gap: 8px !important;
-        background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
-        color: #ffffff !important;
-        border: 2px solid #38bdf8 !important;
-        border-radius: 40px !important;
-        padding: 10px 20px !important;
-        font-size: 0.95rem !important;
-        font-weight: 700 !important;
-        box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45) !important;
-        cursor: pointer !important;
-        transition: all 0.25s ease-in-out !important;
-        animation: bot-glow-pulse 2.8s infinite !important;
-    }
-    div[data-testid="stPopover"] > button:hover {
-        background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%) !important;
-        box-shadow: 0 10px 32px rgba(56, 189, 248, 0.7) !important;
-        transform: translateY(-2px) scale(1.02) !important;
-        border-color: #ffffff !important;
-    }
-    div[data-testid="stPopover"] > button p,
-    div[data-testid="stPopover"] > button span,
-    div[data-testid="stPopover"] > button div {
-        color: #ffffff !important;
-        font-weight: 700 !important;
-    }
-    @keyframes bot-glow-pulse {
-        0% { box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4); }
-        50% { box-shadow: 0 8px 28px rgba(56, 189, 248, 0.75), 0 0 14px rgba(56, 189, 248, 0.5); }
-        100% { box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4); }
-    }
-    div[data-testid="stPopoverBody"] {
-        width: 390px !important;
-        max-width: calc(100vw - 32px) !important;
-        max-height: 560px !important;
-        background: #0f172a !important;
-        border: 1px solid rgba(56, 189, 248, 0.4) !important;
-        border-radius: 18px !important;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 20px rgba(2, 132, 199, 0.25) !important;
-        padding: 14px 16px !important;
-    }
-    div[data-testid="stPopoverBody"] .stChatMessage {
-        background-color: rgba(30, 41, 59, 0.6) !important;
-        border: 1px solid rgba(255, 255, 255, 0.05) !important;
-        border-radius: 12px !important;
-        margin-bottom: 8px !important;
-        padding: 8px 12px !important;
-    }
-    div[data-testid="stPopoverBody"] .stChatMessage[data-testid="chat-message-user"] {
-        background-color: rgba(2, 132, 199, 0.15) !important;
-        border-color: rgba(56, 189, 248, 0.3) !important;
+    div[data-testid="stDialog"], div[role="dialog"] {
+        background-color: #0b1120 !important;
+        border: 1px solid rgba(56, 189, 248, 0.3) !important;
+        border-radius: 20px !important;
+        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 25px rgba(2, 132, 199, 0.25) !important;
     }
 </style>
 """, unsafe_allow_html=True)
