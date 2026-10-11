@@ -191,14 +191,14 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
     """
     Renders the small 3D robot avatar on the bottom-right corner.
     Floats continuously with a gentle bobbing animation and 'How may I help you? 👋' tooltip.
-    Clicking it opens the conversational AI health assistant dialogue.
+    Clicking it opens the conversational AI health assistant dialogue natively.
     """
     init_floating_bot_state()
     b64 = get_bot_avatar_b64()
     is_hindi = st.session_state.get("language", "en") == "hi"
     speech_text = "How may I help you? 👋" if not is_hindi else "मैं आपकी क्या सहायता करूँ? 👋"
 
-    # Render the standalone HTML floating bot with floating animation and click handler
+    # Floating CSS for both the 3D robot visual and the invisible native button layer
     st.html(f"""
     <style>
     /* Fixed Floating Bot Widget (Bottom-Right Corner) */
@@ -206,7 +206,7 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
         position: fixed !important;
         bottom: 25px !important;
         right: 25px !important;
-        z-index: 9999999 !important;
+        z-index: 9999990 !important;
         display: flex !important;
         flex-direction: column !important;
         align-items: flex-end !important;
@@ -243,7 +243,7 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
         transform: rotate(45deg);
     }}
 
-    /* 3D Robot Head Circular Floating Button */
+    /* 3D Robot Head Circular Visual */
     .bot-avatar-circle {{
         width: 72px;
         height: 72px;
@@ -287,43 +287,47 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
         }}
     }}
 
-    /* Hide the Streamlit trigger button from view */
-    .medassist-hidden-trigger-wrapper {{
+    /* Position the native Streamlit button layer right on top of the 72px robot */
+    div[data-testid="stElementContainer"]:has(#medassist-native-btn-marker) + div[data-testid="stElementContainer"] {{
         position: fixed !important;
-        bottom: 0px !important;
-        right: 0px !important;
-        width: 1px !important;
-        height: 1px !important;
-        opacity: 0 !important;
+        bottom: 25px !important;
+        right: 25px !important;
+        width: 74px !important;
+        height: 74px !important;
+        z-index: 10000000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
         overflow: hidden !important;
-        pointer-events: none !important;
-        z-index: -999 !important;
+        border-radius: 50% !important;
+        animation: botFloatingBob 3s ease-in-out infinite !important;
+    }}
+
+    div[data-testid="stElementContainer"]:has(#medassist-native-btn-marker) + div[data-testid="stElementContainer"] button {{
+        width: 74px !important;
+        height: 74px !important;
+        min-width: 74px !important;
+        min-height: 74px !important;
+        border-radius: 50% !important;
+        opacity: 0 !important;
+        cursor: pointer !important;
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }}
     </style>
 
     <div id="medassist-bot-container">
-        <div class="bot-speech-bubble" onclick="openMedassistBotModal()">
+        <div class="bot-speech-bubble" onclick="(function(){{ var b = Array.from(document.querySelectorAll('button')).find(function(x){{ return x.textContent && x.textContent.indexOf('MEDASSIST_BOT_CLICK_ACTION') !== -1; }}); if(b) b.click(); }})()">
             {speech_text}
         </div>
-        <div class="bot-avatar-circle" onclick="openMedassistBotModal()" title="Click to chat with MedAssist AI">
+        <div class="bot-avatar-circle" title="Click to chat with MedAssist AI">
             <img src="data:image/png;base64,{b64}" alt="MedAssist AI Bot" />
         </div>
     </div>
-
-    <script>
-    function openMedassistBotModal() {{
-        // Find and click the Streamlit bridge button
-        const allButtons = Array.from(document.querySelectorAll('button'));
-        const bridgeBtn = allButtons.find(b => b.innerText && b.innerText.includes('MEDASSIST_BOT_TRIGGER_KEY'));
-        if (bridgeBtn) {{
-            bridgeBtn.click();
-        }}
-    }}
-    </script>
     """)
 
-    # Streamlit bridge button (hidden with opacity:0, triggered by JavaScript onclick)
-    st.markdown('<div class="medassist-hidden-trigger-wrapper">', unsafe_allow_html=True)
-    if st.button("MEDASSIST_BOT_TRIGGER_KEY", key="hidden_bot_action_trigger"):
+    # Native Streamlit clickable button anchor and button
+    st.markdown('<div id="medassist-native-btn-marker" style="display:none;"></div>', unsafe_allow_html=True)
+    if st.button("MEDASSIST_BOT_CLICK_ACTION", key="medassist_native_floating_btn"):
         open_medassist_bot_dialog(patient_id, patient_db)
-    st.markdown('</div>', unsafe_allow_html=True)
