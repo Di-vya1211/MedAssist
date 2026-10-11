@@ -47,24 +47,17 @@ from patients.patient_profile_ui import render_patient_dashboard_tab, calculate_
 
 # Voice Service & Reusable Voice UI
 import importlib
-import core.llm
-import core.drug_qa_backend
-import agents.drug_info_agent
-import reports.report_analyzer
-import agents.translation_agent
-import voice.voice_service
-import voice.voice_ui
-import voice.voice_assistant
-import voice.floating_bot
-importlib.reload(core.llm)
-importlib.reload(core.drug_qa_backend)
-importlib.reload(agents.drug_info_agent)
-importlib.reload(reports.report_analyzer)
-importlib.reload(agents.translation_agent)
-importlib.reload(voice.voice_service)
-importlib.reload(voice.voice_ui)
-importlib.reload(voice.voice_assistant)
-importlib.reload(voice.floating_bot)
+for _mod_name in [
+    "core.llm", "core.drug_qa_backend", "agents.drug_info_agent",
+    "reports.report_analyzer", "agents.translation_agent",
+    "voice.voice_service", "voice.voice_ui", "voice.voice_assistant",
+    "voice.floating_bot"
+]:
+    try:
+        _m = importlib.import_module(_mod_name)
+        importlib.reload(_m)
+    except Exception as _e:
+        print(f"[app] Module reload notice for {_mod_name}: {_e}")
 from voice.voice_service import voice_service
 from voice.voice_ui import render_voice_input_widget, render_read_aloud_widget
 from voice.voice_assistant import conversational_assistant
