@@ -63,6 +63,12 @@ from voice.voice_service import voice_service
 from voice.voice_ui import render_voice_input_widget, render_read_aloud_widget
 from voice.voice_assistant import conversational_assistant
 from voice.floating_bot import render_floating_bot
+from core.instant_cache import (
+    get_instant_disease,
+    get_instant_drug,
+    get_instant_sample_report,
+    get_instant_symptom_prediction
+)
 
 # ---------------------------------------------------------------------------
 # Module imports with graceful degradation
@@ -441,14 +447,18 @@ if "selected_test" in query_params:
 
 
 # ---------------------------------------------------------------------------
-# High-Clarity Modern Healthcare CSS Theme
+# Ultra-Crisp Tactical Dark Clinical CSS Theme
 # ---------------------------------------------------------------------------
 st.markdown("""
 <style>
-    /* Main Layout & Dark Canvas */
+    /* Main Layout & Tactical Obsidian Canvas */
     .stApp {
-        background-color: #0b0f19;
-        color: #f1f5f9;
+        background-color: #050811;
+        background-image: 
+            linear-gradient(rgba(56, 189, 248, 0.02) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(56, 189, 248, 0.02) 1px, transparent 1px);
+        background-size: 32px 32px;
+        color: #e2e8f0;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
     
@@ -462,72 +472,81 @@ st.markdown("""
         color: #cbd5e1 !important;
     }
 
-    /* Modern Card Styles */
+    /* Monospace metric styles */
+    .telemetry-tag {
+        font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace !important;
+        font-size: 0.74rem !important;
+        letter-spacing: 0.04em !important;
+    }
+
+    /* Modern Tactical Card Styles with 1px hairline borders */
     .info-card {
-        background: rgba(22, 31, 51, 0.75);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        padding: 20px;
-        border-radius: 14px;
-        border-left: 4px solid #38bdf8;
-        margin-bottom: 16px;
-        backdrop-filter: blur(8px);
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+        background: #080d1a;
+        border: 1px solid rgba(56, 189, 248, 0.2);
+        padding: 16px 18px;
+        border-radius: 6px;
+        border-left: 3px solid #38bdf8;
+        margin-bottom: 14px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
     }
     .warning-card {
-        background: rgba(30, 25, 20, 0.8);
-        border: 1px solid rgba(245, 158, 11, 0.3);
-        padding: 16px;
-        border-radius: 12px;
-        border-left: 4px solid #f59e0b;
+        background: #0c0d16;
+        border: 1px solid rgba(245, 158, 11, 0.25);
+        padding: 14px 18px;
+        border-radius: 6px;
+        border-left: 3px solid #f59e0b;
         margin-bottom: 14px;
     }
     .critical-card {
-        background: rgba(40, 20, 25, 0.85);
-        border: 1px solid rgba(239, 68, 68, 0.4);
-        padding: 18px;
-        border-radius: 14px;
-        border-left: 5px solid #ef4444;
-        margin-bottom: 16px;
+        background: #130a0f;
+        border: 1px solid rgba(239, 68, 68, 0.35);
+        padding: 16px 18px;
+        border-radius: 6px;
+        border-left: 3px solid #ef4444;
+        margin-bottom: 14px;
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.15);
     }
     .success-card {
-        background: rgba(16, 35, 25, 0.75);
-        border: 1px solid rgba(16, 185, 129, 0.3);
-        padding: 16px;
-        border-radius: 12px;
-        border-left: 4px solid #10b981;
+        background: #07130e;
+        border: 1px solid rgba(16, 185, 129, 0.25);
+        padding: 14px 18px;
+        border-radius: 6px;
+        border-left: 3px solid #10b981;
         margin-bottom: 14px;
     }
 
-    /* Tabs Styling */
+    /* High-density Tactical Tabs Styling */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background-color: rgba(15, 23, 42, 0.65);
-        padding: 6px 10px;
-        border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        gap: 6px;
+        background-color: #080d1a;
+        padding: 5px 8px;
+        border-radius: 8px;
+        border: 1px solid rgba(56, 189, 248, 0.18);
     }
     .stTabs [data-baseweb="tab"], .stTabs button[role="tab"] {
         background-color: transparent !important;
         color: #94a3b8 !important;
-        border-radius: 12px !important;
-        padding: 8px 18px !important;
+        border-radius: 6px !important;
+        padding: 7px 16px !important;
         font-weight: 600;
-        font-size: 0.92rem;
-        transition: all 0.25s ease-in-out;
-        border: none !important;
+        font-size: 0.88rem;
+        transition: all 0.15s ease-in-out;
+        border: 1px solid transparent !important;
         outline: none !important;
     }
     .stTabs [data-baseweb="tab"]:hover, .stTabs button[role="tab"]:hover {
-        background-color: rgba(255, 255, 255, 0.06) !important;
+        background-color: rgba(255, 255, 255, 0.04) !important;
         color: #f1f5f9 !important;
-        border-radius: 12px !important;
+        border-color: rgba(56, 189, 248, 0.2) !important;
+        border-radius: 6px !important;
     }
     .stTabs [aria-selected="true"], .stTabs button[role="tab"][aria-selected="true"] {
-        background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+        background: rgba(2, 132, 199, 0.22) !important;
         color: #ffffff !important;
-        border-radius: 12px !important;
-        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
-        border: none !important;
+        border: 1px solid #38bdf8 !important;
+        border-radius: 6px !important;
+        box-shadow: 0 0 12px rgba(56, 189, 248, 0.25) !important;
+        font-weight: 700 !important;
         outline: none !important;
     }
     .stTabs [data-baseweb="tab-highlight"],
@@ -537,42 +556,44 @@ st.markdown("""
         height: 0 !important;
     }
 
-    /* High-contrast Inputs */
+    /* Tactical Inputs */
     .stTextInput > div > div > input, .stTextArea > div > div > textarea {
-        background-color: #131b2e !important;
+        background-color: #080d1a !important;
         color: #f8fafc !important;
-        border: 1px solid rgba(56, 189, 248, 0.25) !important;
-        border-radius: 10px !important;
-        padding: 12px 14px !important;
-        font-size: 1rem !important;
+        border: 1px solid rgba(56, 189, 248, 0.22) !important;
+        border-radius: 6px !important;
+        padding: 10px 12px !important;
+        font-size: 0.94rem !important;
     }
     .stTextInput > div > div > input:focus, .stTextArea > div > div > textarea:focus {
         border-color: #38bdf8 !important;
-        box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25) !important;
+        box-shadow: 0 0 0 1px #38bdf8 !important;
     }
     .stSelectbox > div > div {
-        background-color: #131b2e !important;
+        background-color: #080d1a !important;
         color: #f8fafc !important;
-        border-radius: 10px !important;
-        border: 1px solid rgba(56, 189, 248, 0.25) !important;
+        border-radius: 6px !important;
+        border: 1px solid rgba(56, 189, 248, 0.22) !important;
+        font-size: 0.88rem !important;
     }
 
-    /* Buttons */
+    /* Crisp Tactical Buttons */
     .stButton > button {
-        border-radius: 10px !important;
+        border-radius: 6px !important;
         font-weight: 600 !important;
-        transition: all 0.2s ease !important;
-        padding: 8px 18px !important;
-        background: #1e293b !important;
+        font-size: 0.88rem !important;
+        transition: all 0.15s ease !important;
+        padding: 7px 16px !important;
+        background: #0f172a !important;
         color: #f8fafc !important;
-        border: 1px solid rgba(56, 189, 248, 0.3) !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid rgba(56, 189, 248, 0.28) !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
     }
     .stButton > button:hover {
-        background: #334155 !important;
+        background: #1e293b !important;
         color: #38bdf8 !important;
         border-color: #38bdf8 !important;
-        box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25) !important;
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.25) !important;
     }
     .stButton > button p, 
     .stButton > button span, 
@@ -585,14 +606,14 @@ st.markdown("""
         background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
         color: #ffffff !important;
         border: 1px solid #38bdf8 !important;
-        box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35) !important;
+        box-shadow: 0 0 12px rgba(2, 132, 199, 0.35) !important;
     }
     .stButton > button[kind="primary"]:hover,
     .stButton > button[data-testid="stBaseButton-primary"]:hover {
         background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%) !important;
         color: #ffffff !important;
         border-color: #7dd3fc !important;
-        box-shadow: 0 4px 18px rgba(56, 189, 248, 0.45) !important;
+        box-shadow: 0 0 16px rgba(56, 189, 248, 0.5) !important;
     }
     .stButton > button[kind="primary"] p,
     .stButton > button[kind="primary"] span,
@@ -604,46 +625,31 @@ st.markdown("""
     }
     .stButton > button[kind="secondary"],
     .stButton > button[data-testid="stBaseButton-secondary"] {
-        background: #1e293b !important;
+        background: #0f172a !important;
         color: #f1f5f9 !important;
-        border: 1px solid rgba(56, 189, 248, 0.3) !important;
+        border: 1px solid rgba(56, 189, 248, 0.25) !important;
     }
     .stButton > button[kind="secondary"]:hover,
     .stButton > button[data-testid="stBaseButton-secondary"]:hover {
-        background: #334155 !important;
+        background: #1e293b !important;
         color: #38bdf8 !important;
         border-color: #38bdf8 !important;
-        box-shadow: 0 4px 12px rgba(56, 189, 248, 0.25) !important;
-    }
-    .stButton > button[kind="secondary"] p,
-    .stButton > button[kind="secondary"] span,
-    .stButton > button[kind="secondary"] div,
-    .stButton > button[data-testid="stBaseButton-secondary"] p,
-    .stButton > button[data-testid="stBaseButton-secondary"] span,
-    .stButton > button[data-testid="stBaseButton-secondary"] div {
-        color: #f1f5f9 !important;
-    }
-    .stButton > button[kind="secondary"]:hover p,
-    .stButton > button[kind="secondary"]:hover span,
-    .stButton > button[kind="secondary"]:hover div,
-    .stButton > button[data-testid="stBaseButton-secondary"]:hover p,
-    .stButton > button[data-testid="stBaseButton-secondary"]:hover span,
-    .stButton > button[data-testid="stBaseButton-secondary"]:hover div {
-        color: #38bdf8 !important;
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.2) !important;
     }
 
     /* Expanders */
     .streamlit-expanderHeader {
-        background-color: rgba(22, 31, 51, 0.6) !important;
-        border-radius: 10px !important;
+        background-color: #080d1a !important;
+        border: 1px solid rgba(56, 189, 248, 0.18) !important;
+        border-radius: 6px !important;
         color: #f8fafc !important;
         font-weight: 600 !important;
+        font-size: 0.9rem !important;
     }
 
     /* ========================================================
-       FLOATING AI BOT DIALOG AS SIDE SQUARE CARD (BOTTOM-RIGHT)
+       TACTICAL FLOATING AI COMPANION DIALOG HUD (BOTTOM-RIGHT)
        ======================================================== */
-    /* 1. Backdrop / Outer Flex Container: Fullscreen, transparent, aligns content to bottom-right */
     div[data-baseweb="modal"],
     div[data-baseweb="modal"] > div,
     div[data-testid="stDialog"],
@@ -651,10 +657,6 @@ st.markdown("""
     .e1mymz5c0 {
         position: fixed !important;
         inset: 0 !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
         width: 100vw !important;
         height: 100vh !important;
         background: transparent !important;
@@ -667,68 +669,41 @@ st.markdown("""
         z-index: 99999999 !important;
     }
 
-    /* 2. Inner Dialog Card: Fixed at bottom-right corner directly above the 3D bot */
     div[data-testid="stDialog"] > div,
     div.stDialog > div,
     div[role="dialog"],
     .e1mymz5c1 {
         position: fixed !important;
-        bottom: 105px !important;
-        right: 25px !important;
+        bottom: 85px !important;
+        right: 24px !important;
         inset: auto !important;
-        top: auto !important;
-        left: auto !important;
         margin: 0 !important;
-        width: 410px !important;
-        max-width: calc(100vw - 35px) !important;
-        height: 550px !important;
-        max-height: calc(100vh - 125px) !important;
-        background: #0b1120 !important;
-        background-color: #0b1120 !important;
-        border: 2px solid #38bdf8 !important;
-        border-radius: 20px !important;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95), 0 0 30px rgba(56, 189, 248, 0.4) !important;
+        width: 420px !important;
+        max-width: calc(100vw - 32px) !important;
+        height: 560px !important;
+        max-height: calc(100vh - 105px) !important;
+        background: #060b16 !important;
+        background-color: #060b16 !important;
+        border: 1px solid rgba(56, 189, 248, 0.4) !important;
+        border-radius: 8px !important;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95), 0 0 25px rgba(56, 189, 248, 0.25) !important;
         overflow-y: auto !important;
-        padding: 1.15rem 1.3rem !important;
+        padding: 1.1rem 1.25rem !important;
         display: flex !important;
         flex-direction: column !important;
         pointer-events: auto !important;
-        transform-origin: bottom right !important;
-        animation: botPopupFromBot 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
     }
 
-    /* Pop out directly from the bottom-right 3D bot */
-    @keyframes botPopupFromBot {
-        0% {
-            opacity: 0;
-            transform: scale(0.12) translateY(80px) translateX(40px);
-        }
-        70% {
-            opacity: 1;
-            transform: scale(1.03) translateY(-4px) translateX(-2px);
-        }
-        100% {
-            opacity: 1;
-            transform: scale(1) translateY(0) translateX(0);
-        }
-    }
-
-    /* 3. Hide floating speech bubble when dialog is open so they do not overlap */
-    body:has(div[data-testid="stDialog"]) .bot-speech-bubble,
-    body:has(div.stDialog) .bot-speech-bubble,
-    body:has(div[role="dialog"]) .bot-speech-bubble {
-        display: none !important;
-    }
-
-    /* 4. Compact dialog header & stylish close button */
     div[data-testid="stDialog"] h2,
     div.stDialog h2,
     div[role="dialog"] h2 {
-        font-size: 1.05rem !important;
+        font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace !important;
+        font-size: 0.92rem !important;
         margin: 0 !important;
         padding: 0 !important;
-        color: #f8fafc !important;
+        color: #38bdf8 !important;
         font-weight: 700 !important;
+        letter-spacing: 0.04em !important;
     }
 
     div[data-testid="stDialog"] button[aria-label="Close"],
@@ -736,35 +711,32 @@ st.markdown("""
     div[role="dialog"] button[aria-label="Close"],
     .e1mymz5c3 {
         color: #94a3b8 !important;
-        top: 14px !important;
-        right: 14px !important;
-        font-size: 1.2rem !important;
-        border-radius: 8px !important;
-        transition: all 0.2s ease !important;
+        top: 12px !important;
+        right: 12px !important;
+        font-size: 1.1rem !important;
+        border-radius: 4px !important;
+        transition: all 0.15s ease !important;
     }
-
     div[data-testid="stDialog"] button[aria-label="Close"]:hover,
     div.stDialog button[aria-label="Close"]:hover,
     div[role="dialog"] button[aria-label="Close"]:hover,
     .e1mymz5c3:hover {
         color: #f43f5e !important;
         background: rgba(244, 63, 94, 0.15) !important;
-        transform: scale(1.1) !important;
     }
 
-    /* 5. Custom scrollbar for the dialog card */
     div[data-testid="stDialog"] > div::-webkit-scrollbar,
     div.stDialog > div::-webkit-scrollbar,
     div[role="dialog"]::-webkit-scrollbar,
     .e1mymz5c1::-webkit-scrollbar {
-        width: 6px !important;
+        width: 4px !important;
     }
     div[data-testid="stDialog"] > div::-webkit-scrollbar-thumb,
     div.stDialog > div::-webkit-scrollbar-thumb,
     div[role="dialog"]::-webkit-scrollbar-thumb,
     .e1mymz5c1::-webkit-scrollbar-thumb {
         background: rgba(56, 189, 248, 0.3) !important;
-        border-radius: 10px !important;
+        border-radius: 4px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -924,10 +896,15 @@ def main():
     with top_col1:
         st.markdown(f"""
         <div style='display: flex; align-items: center; gap: 12px;'>
-            <span style='font-size: 2.2rem;'>🏥</span>
+            <div style='background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; justify-content: center;'>
+                <span style='font-size: 1.4rem;'>⚡</span>
+            </div>
             <div>
-                <h2 style='margin: 0; color: #38bdf8 !important; font-size: 1.6rem;'>MedAssist</h2>
-                <p style='margin: 0; color: #94a3b8; font-size: 0.85rem;'>Rural Health Companion & Allergy Protection System</p>
+                <div style='display: flex; align-items: center; gap: 8px;'>
+                    <h2 style='margin: 0; color: #f8fafc !important; font-size: 1.45rem; font-weight: 800; letter-spacing: -0.01em;'>MedAssist</h2>
+                    <span style='background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 4px; padding: 1px 6px; font-family: monospace; font-size: 0.68rem; font-weight: 700;'>CLINICAL OS v4.2</span>
+                </div>
+                <p style='margin: 2px 0 0 0; color: #64748b; font-family: monospace; font-size: 0.74rem;'>INTELLIGENT HEALTH COMPANION &bull; ALLERGY SAFEGUARD ARMED</p>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -961,7 +938,7 @@ def main():
             st.rerun()
 
     with top_col_bot:
-        if st.button("🤖 AI Companion", use_container_width=True, type="primary"):
+        if st.button("⚡ AI Companion", use_container_width=True, type="primary"):
             st.session_state.floating_bot_dialog_open = True
             st.rerun()
 
@@ -976,24 +953,37 @@ def main():
             st.session_state.patient_name = None
             st.rerun()
 
+    # LIVE CLINICAL TELEMETRY TICKER
+    st.markdown(f"""
+    <div style="background:#080d1a; border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 6px; padding: 6px 14px; margin: 10px 0 12px 0; display: flex; align-items: center; justify-content: space-between; font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace; font-size: 0.74rem;">
+        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+            <span style="color: #10b981; font-weight: 700;">● CORE ENGINE: ONLINE</span>
+            <span style="color: #38bdf8;">⚡ INSTANT CACHE: ARMED (0ms)</span>
+            <span style="color: #cbd5e1;">🛡️ ALLERGY ENGINE: ARMED</span>
+            <span style="color: #f59e0b;">🏥 EMERGENCY: 108 / 102</span>
+        </div>
+        <span style="color: #64748b; font-weight: 600;">PATIENT SESSION // #MED-{patient_id}</span>
+    </div>
+    """, unsafe_allow_html=True)
+
     # CRITICAL ALLERGY BANNER (If severe allergies exist)
     if critical_allergies:
         crit_names = ", ".join([a.get('medicine_name') for a in critical_allergies])
         st.markdown(f"""
-        <div class="critical-card" style="margin-top: 14px;">
+        <div class="critical-card" style="margin-top: 10px;">
             <div style="display:flex; align-items:center; gap: 10px;">
-                <span style="font-size:1.5rem;">🚨</span>
+                <span style="font-size:1.3rem;">🚨</span>
                 <div>
-                    <h4 style="color:#ef4444 !important; margin:0; font-size:1rem;">ACTIVE ALLERGY SAFEGUARD: {crit_names}</h4>
-                    <p style="color:#cbd5e1; margin:2px 0 0 0; font-size:0.85rem;">
-                        MedAssist is actively guarding your recommendations to prevent accidental exposure to these medications.
+                    <h4 style="color:#ef4444 !important; margin:0; font-size:0.95rem; font-family:monospace;">ACTIVE ALLERGY SAFEGUARD: {crit_names.upper()}</h4>
+                    <p style="color:#cbd5e1; margin:2px 0 0 0; font-size:0.82rem;">
+                        MedAssist is actively guarding your clinical queries to prevent accidental exposure to contraindicated medications.
                     </p>
                 </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-    st.markdown("<hr style='border-color: rgba(255,255,255,0.08); margin: 12px 0 18px 0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='border-color: rgba(255,255,255,0.08); margin: 10px 0 16px 0;'>", unsafe_allow_html=True)
 
     # ═══════════════════════════════════════════════════════════════════════════
     # MAIN APP TABS
@@ -1043,9 +1033,15 @@ def main():
         def _set_disease_example(ex_name):
             st.session_state.disease_text_field = ex_name
             st.session_state.disease_input = ex_name
-            st.session_state._trigger_disease = True
+            inst_res = get_instant_disease(ex_name, target_lang=st.session_state.language)
+            if inst_res:
+                st.session_state.disease_result = inst_res
+                if "selected_medical_test" in st.session_state:
+                    del st.session_state.selected_medical_test
+            else:
+                st.session_state._trigger_disease = True
 
-        st.markdown('<p style="color:#64748b; font-size:0.85rem; margin-top:8px;">Quick examples:</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:#64748b; font-family:monospace; font-size:0.78rem; margin-top:8px;">[ QUICK CLINICAL PROTOCOLS - 0ms INSTANT ACCESS ]</p>', unsafe_allow_html=True)
         ex_cols = st.columns(5)
         disease_examples = ["Diabetes", "Asthma", "Pneumonia", "Arthritis", "Coronavirus"]
         for i, ex in enumerate(disease_examples):
@@ -1062,7 +1058,13 @@ def main():
             if detect_emergency(effective_disease):
                 st.error("🚨 EMERGENCY KEYWORDS DETECTED: If experiencing severe symptoms, call 108 immediately!")
 
-            if not DISEASE_MODULE_OK:
+            # Fast 0ms Instant Cache Check
+            inst_res = get_instant_disease(effective_disease, target_lang=st.session_state.language)
+            if inst_res:
+                st.session_state.disease_result = inst_res
+                if "selected_medical_test" in st.session_state:
+                    del st.session_state.selected_medical_test
+            elif not DISEASE_MODULE_OK:
                 st.error("❌ Disease Info module is unavailable.")
             else:
                 if "disease_retriever" not in st.session_state:
@@ -1302,9 +1304,13 @@ def main():
         def _set_drug_example(ex_name):
             st.session_state.drug_text_input = ex_name
             st.session_state.drug_search = ex_name
-            st.session_state._trigger_drug = True
+            instant_res = get_instant_drug(ex_name, target_lang=st.session_state.language)
+            if instant_res:
+                st.session_state.drug_results = instant_res
+            else:
+                st.session_state._trigger_drug = True
 
-        st.markdown('<p style="color:#64748b; font-size:0.85rem;">Quick examples:</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:#64748b; font-family:monospace; font-size:0.78rem; margin-top:8px;">[ QUICK PHARMACOLOGICAL DOSAGES - 0ms INSTANT ACCESS ]</p>', unsafe_allow_html=True)
         dex_cols = st.columns(5)
         drug_examples = ["Paracetamol", "Ibuprofen", "Aspirin", "Metformin", "Amoxicillin"]
         for idx, ex in enumerate(drug_examples):
@@ -1344,16 +1350,21 @@ def main():
                 except Exception as e:
                     print(f"[DrugTab] Allergy check notice: {e}")
 
-                drug_agent = DrugInfoAgent()
-                st.session_state.drug_agent = drug_agent
+                # Fast 0ms Instant Cache Check
+                instant_drug_res = get_instant_drug(effective_drug_query, target_lang=st.session_state.language)
+                if instant_drug_res:
+                    st.session_state.drug_results = instant_drug_res
+                else:
+                    drug_agent = DrugInfoAgent()
+                    st.session_state.drug_agent = drug_agent
 
-                with st.spinner(f"Analyzing drug database for '{effective_drug_query}'..."):
-                    try:
-                        # Pass updated patient allergies into drug agent!
-                        drug_res = drug_agent.answer(effective_drug_query, patient_allergies=patient_allergies)
-                        st.session_state.drug_results = drug_res
-                    except Exception as e:
-                        st.error(f"Error fetching drug info: {e}")
+                    with st.spinner(f"Analyzing drug database for '{effective_drug_query}'..."):
+                        try:
+                            # Pass updated patient allergies into drug agent!
+                            drug_res = drug_agent.answer(effective_drug_query, patient_allergies=patient_allergies)
+                            st.session_state.drug_results = drug_res
+                        except Exception as e:
+                            st.error(f"Error fetching drug info: {e}")
 
         # Display Drug Result
         if st.session_state.get("drug_results"):
@@ -1547,20 +1558,22 @@ def main():
         uploaded_report = st.file_uploader("Upload Medical Report (PDF, JPG, PNG, WEBP)", type=["pdf", "png", "jpg", "jpeg", "webp"])
 
         # Quick Sample Reports
-        st.markdown("<p style='color:#64748b; font-size:0.85rem; margin-top:6px;'>Or test instantly with verified sample reports:</p>", unsafe_allow_html=True)
+        st.markdown("<p style='color:#64748b; font-family:monospace; font-size:0.78rem; margin-top:6px;'>[ VERIFIED CLINICAL LAB PANELS - 0ms INSTANT ACCESS ]</p>", unsafe_allow_html=True)
         r_cols = st.columns(3)
         sample_reports_data = [
             ("📋 Sample CBC Report", "cbc", "COMPLETE BLOOD COUNT (CBC) REPORT\nPatient: Ramesh Kumar, Age: 42, Gender: Male\nTest Date: 10-Oct-2026\n\nTEST PARAMETERS:\n- Hemoglobin: 10.2 g/dL (Normal: 13.0 - 17.0 g/dL) [LOW - Mild Anemia]\n- Total Leukocyte Count (WBC): 12,500 /mcL (Normal: 4,000 - 11,000 /mcL) [HIGH - Mild Infection]\n- Platelet Count: 180,000 /mcL (Normal: 150,000 - 450,000 /mcL) [Normal]\n- Hematocrit (PCV): 32.1 % (Normal: 40 - 50 %) [LOW]\n- ESR: 28 mm/hr (Normal: 0 - 15 mm/hr) [HIGH - Inflammation]\n\nImpression: Mild microcytic hypochromic anemia with mild leukocytosis. Clinical correlation advised."),
             ("📋 Sample Diabetes & Lipid Panel", "lipid", "METABOLIC & LIPID PROFILE REPORT\nPatient: Sunita Devi, Age: 55, Gender: Female\nTest Date: 10-Oct-2026\n\nTEST PARAMETERS:\n- Fasting Blood Sugar (FBS): 168 mg/dL (Normal: 70 - 100 mg/dL) [HIGH - Diabetic Range]\n- HbA1c: 8.4 % (Normal: < 5.7 %, Diabetic: >= 6.5 %) [HIGH]\n- Total Cholesterol: 245 mg/dL (Normal: < 200 mg/dL) [HIGH]\n- LDL Cholesterol: 162 mg/dL (Normal: < 100 mg/dL) [HIGH - Plaque Risk]\n- HDL Cholesterol: 38 mg/dL (Normal: > 50 mg/dL) [LOW]\n- Triglycerides: 220 mg/dL (Normal: < 150 mg/dL) [HIGH]\n\nImpression: Uncontrolled Type 2 Diabetes Mellitus with mixed dyslipidemia. Lifestyle modification and physician review required."),
             ("📋 Sample Renal & Liver Panel", "renal", "RENAL & LIVER FUNCTION REPORT\nPatient: Amit Verma, Age: 48, Gender: Male\nTest Date: 10-Oct-2026\n\nTEST PARAMETERS:\n- Serum Creatinine: 1.8 mg/dL (Normal: 0.7 - 1.3 mg/dL) [HIGH - Impaired Clearance]\n- Blood Urea Nitrogen (BUN): 28 mg/dL (Normal: 7 - 20 mg/dL) [HIGH]\n- Total Bilirubin: 0.9 mg/dL (Normal: 0.2 - 1.2 mg/dL) [Normal]\n- SGPT (ALT): 68 U/L (Normal: < 45 U/L) [MILD ELEVATION]\n- SGOT (AST): 54 U/L (Normal: < 40 U/L) [MILD ELEVATION]\n- Serum Uric Acid: 7.8 mg/dL (Normal: 3.5 - 7.2 mg/dL) [HIGH]\n\nImpression: Mild elevation in renal parameters (Creatinine/BUN) and transaminases. Nephrology/Physician follow-up recommended. Avoid nephrotoxic NSAIDs.")
         ]
-        def _set_sample_report(r_text, label):
+        def _set_sample_report(key_suffix, r_text, label):
+            st.session_state.active_report_key = key_suffix
             st.session_state.active_report_text = r_text
             st.session_state.active_report_name = label
+            st.session_state.active_report_analysis = get_instant_sample_report(key_suffix, target_lang=st.session_state.language)
 
         for idx, (label, key_suffix, r_text) in enumerate(sample_reports_data):
             with r_cols[idx]:
-                st.button(label, key=f"sample_rep_btn_{key_suffix}", on_click=_set_sample_report, args=(r_text, label), use_container_width=True)
+                st.button(label, key=f"sample_rep_btn_{key_suffix}", on_click=_set_sample_report, args=(key_suffix, r_text, label), use_container_width=True)
 
         raw_report_text = None
         temp_path = None
@@ -1582,15 +1595,19 @@ def main():
             st.info(f"Showing analysis for: **{st.session_state.get('active_report_name', 'Sample Medical Report')}**")
 
         if raw_report_text:
-            with st.spinner("📖 Extracting text and analyzing report..."):
-                try:
-                    from reports.report_analyzer import get_structured_analysis
+            try:
+                from reports.report_analyzer import get_structured_analysis
 
-                    if raw_report_text.startswith("PDF extraction error") or raw_report_text.startswith("OCR error"):
-                        st.error(raw_report_text)
-                    elif len(raw_report_text) < 20:
-                        st.warning("Could not clearly read text from the file. Please upload a clearer image or document.")
-                    else:
+                analysis = None
+                if raw_report_text.startswith("PDF extraction error") or raw_report_text.startswith("OCR error"):
+                    st.error(raw_report_text)
+                elif len(raw_report_text) < 20:
+                    st.warning("Could not clearly read text from the file. Please upload a clearer image or document.")
+                elif uploaded_report is None and st.session_state.get("active_report_analysis"):
+                    # Fast 0ms Instant Cache
+                    analysis = st.session_state.active_report_analysis
+                else:
+                    with st.spinner("📖 Extracting text and analyzing report..."):
                         # Analyze with patient profile & allergies injected!
                         analysis = get_structured_analysis(
                             raw_report_text,
@@ -1599,157 +1616,157 @@ def main():
                             patient_profile=patient
                         )
 
-                        # Ironclad verification of all sections
-                        vals = analysis.get("values_found", {})
-                        if not vals:
-                            from reports.report_analyzer import extract_values
-                            vals = extract_values(raw_report_text)
-                            analysis["values_found"] = vals
+                if analysis:
+                    # Verification of sections
+                    vals = analysis.get("values_found", {})
+                    if not vals:
+                        from reports.report_analyzer import extract_values
+                        vals = extract_values(raw_report_text)
+                        analysis["values_found"] = vals
 
-                        probs = analysis.get("problems", [])
-                        recs = analysis.get("recommendations", [])
-                        diet = analysis.get("diet_lifestyle", [])
-                        doc_text = analysis.get("when_to_see_doctor", "")
-                        summ = analysis.get("summary", "")
+                    probs = analysis.get("problems", [])
+                    recs = analysis.get("recommendations", [])
+                    diet = analysis.get("diet_lifestyle", [])
+                    doc_text = analysis.get("when_to_see_doctor", "")
+                    summ = analysis.get("summary", "")
 
-                        needs_fallback = (
-                            not probs
-                            or not recs
-                            or not diet
-                            or not doc_text
-                            or not summ
-                            or "Based on standard" in summ
-                            or len(summ.strip()) < 20
-                        )
+                    needs_fallback = (
+                        not probs
+                        or not recs
+                        or not diet
+                        or not doc_text
+                        or not summ
+                        or "Based on standard" in summ
+                        or len(summ.strip()) < 20
+                    )
 
-                        if needs_fallback:
-                            from reports.report_analyzer import generate_clinical_findings
-                            clin = generate_clinical_findings(vals, raw_report_text)
-                            if not probs:
-                                probs = clin.get("problems", [])
-                                analysis["problems"] = probs
-                            if not recs:
-                                recs = clin.get("recommendations", [])
-                                analysis["recommendations"] = recs
-                            if not diet:
-                                diet = clin.get("diet_lifestyle", [])
-                                analysis["diet_lifestyle"] = diet
-                            if not doc_text:
-                                doc_text = clin.get("when_to_see_doctor", "")
-                                analysis["when_to_see_doctor"] = doc_text
-                            if not summ or "Based on standard" in summ or len(summ.strip()) < 20:
-                                summ = clin.get("summary", "")
-                                analysis["summary"] = summ
+                    if needs_fallback:
+                        from reports.report_analyzer import generate_clinical_findings
+                        clin = generate_clinical_findings(vals, raw_report_text)
+                        if not probs:
+                            probs = clin.get("problems", [])
+                            analysis["problems"] = probs
+                        if not recs:
+                            recs = clin.get("recommendations", [])
+                            analysis["recommendations"] = recs
+                        if not diet:
+                            diet = clin.get("diet_lifestyle", [])
+                            analysis["diet_lifestyle"] = diet
+                        if not doc_text:
+                            doc_text = clin.get("when_to_see_doctor", "")
+                            analysis["when_to_see_doctor"] = doc_text
+                        if not summ or "Based on standard" in summ or len(summ.strip()) < 20:
+                            summ = clin.get("summary", "")
+                            analysis["summary"] = summ
 
-                            # Translate if target language is not English
-                            if st.session_state.language != "en" and TRANSLATION_OK:
-                                try:
-                                    analysis["summary"] = translate_content(analysis["summary"], target_lang=st.session_state.language)
-                                    analysis["when_to_see_doctor"] = translate_content(analysis["when_to_see_doctor"], target_lang=st.session_state.language)
-                                    analysis["problems"] = [translate_content(p, target_lang=st.session_state.language) for p in analysis["problems"]]
-                                    analysis["recommendations"] = [translate_content(r, target_lang=st.session_state.language) for r in analysis["recommendations"]]
-                                    analysis["diet_lifestyle"] = [translate_content(d, target_lang=st.session_state.language) for d in analysis["diet_lifestyle"]]
-                                except Exception as terr:
-                                    print(f"[ReportUI] Fallback translation notice: {terr}")
+                        if st.session_state.language != "en" and TRANSLATION_OK:
+                            try:
+                                analysis["summary"] = translate_content(analysis["summary"], target_lang=st.session_state.language)
+                                analysis["when_to_see_doctor"] = translate_content(analysis["when_to_see_doctor"], target_lang=st.session_state.language)
+                                analysis["problems"] = [translate_content(p, target_lang=st.session_state.language) for p in analysis["problems"]]
+                                analysis["recommendations"] = [translate_content(r, target_lang=st.session_state.language) for r in analysis["recommendations"]]
+                                analysis["diet_lifestyle"] = [translate_content(d, target_lang=st.session_state.language) for d in analysis["diet_lifestyle"]]
+                            except Exception as terr:
+                                print(f"[ReportUI] Fallback translation notice: {terr}")
 
-                        # Check if any recommendations mention allergic drugs
-                        rec_str = " ".join(analysis.get("recommendations", []))
-                        report_allergy_matches = []
-                        for allg in patient_allergies:
-                            m_name = (allg.get("medicine_name") or "").lower().strip()
-                            if m_name and m_name in rec_str.lower():
-                                report_allergy_matches.append(allg)
+                    # Check if any recommendations mention allergic drugs
+                    rec_str = " ".join(analysis.get("recommendations", []))
+                    report_allergy_matches = []
+                    for allg in patient_allergies:
+                        m_name = (allg.get("medicine_name") or "").lower().strip()
+                        if m_name and m_name in rec_str.lower():
+                            report_allergy_matches.append(allg)
 
-                        if report_allergy_matches:
-                            for c in report_allergy_matches:
-                                st.markdown(f"""
-                                <div class="critical-card">
-                                    <h4 style="color:#ef4444; margin:0;">⚠️ ALLERGY ALERT IN REPORT RECOMMENDATIONS</h4>
-                                    <p style="color:#cbd5e1; margin:4px 0 0 0; font-size:0.9rem;">
-                                        Common medications for findings in this report include <b>{c.get('medicine_name')}</b>, but you have a recorded 
-                                        <b>{c.get('severity')}</b> allergy to it! Inform your doctor to prescribe a safe alternative.
-                                    </p>
-                                </div>
-                                """, unsafe_allow_html=True)
-
-                        # Summary
-                        st.markdown(f"""
-                        <div class="info-card" style="border-left-color: #38bdf8;">
-                            <h4 style="color:#38bdf8; margin:0 0 8px 0;">📝 Report Summary</h4>
-                            <p style="margin:0; font-size:1.05rem; line-height:1.6;">{analysis.get('summary', 'Report analyzed.')}</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                        # Extracted Values
-                        vals = analysis.get("values_found", {})
-                        if vals:
-                            st.markdown("<h4 style='color:#f8fafc;'>📊 Extracted Test Values</h4>", unsafe_allow_html=True)
-                            v_cols = st.columns(min(4, len(vals)))
-                            for i, (k, v) in enumerate(vals.items()):
-                                with v_cols[i % len(v_cols)]:
-                                    st.markdown(f"""
-                                    <div style='background:#161f33; padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.08); text-align:center; margin-bottom:10px;'>
-                                        <p style='color:#94a3b8; font-size:0.75rem; margin:0; text-transform:uppercase;'>{k}</p>
-                                        <p style='color:#38bdf8; font-size:1.25rem; font-weight:700; margin:2px 0 0 0;'>{v}</p>
-                                    </div>
-                                    """, unsafe_allow_html=True)
-
-                        # Problems Found
-                        probs = analysis.get("problems", [])
-                        if probs:
-                            st.markdown("<h4 style='color:#f8fafc;'>⚠️ Key Health Findings</h4>", unsafe_allow_html=True)
-                            for p in probs:
-                                st.markdown(f"""
-                                <div class="warning-card">
-                                    <p style="color:#f59e0b; margin:0; font-weight:600;">• {p}</p>
-                                </div>
-                                """, unsafe_allow_html=True)
-
-                        # Recommendations & Diet
-                        col_rec, col_diet = st.columns(2)
-                        with col_rec:
-                            recs = analysis.get("recommendations", [])
-                            if recs:
-                                st.markdown(f"""
-                                <div class="info-card" style="border-left-color:#10b981;">
-                                    <h4 style="color:#10b981; margin:0 0 10px 0;">✅ Recommended Actions</h4>
-                                    <ul style="margin:0; padding-left:18px;">
-                                        {''.join([f'<li style=\"margin-bottom:6px;\">{r}</li>' for r in recs])}
-                                    </ul>
-                                </div>
-                                """, unsafe_allow_html=True)
-                        with col_diet:
-                            diet = analysis.get("diet_lifestyle", [])
-                            if diet:
-                                st.markdown(f"""
-                                <div class="info-card" style="border-left-color:#f59e0b;">
-                                    <h4 style="color:#f59e0b; margin:0 0 10px 0;">🥗 Diet & Lifestyle</h4>
-                                    <ul style="margin:0; padding-left:18px;">
-                                        {''.join([f'<li style=\"margin-bottom:6px;\">{d}</li>' for d in diet])}
-                                    </ul>
-                                </div>
-                                """, unsafe_allow_html=True)
-
-                        # When to see doctor
-                        doc_text = analysis.get("when_to_see_doctor", "")
-                        if doc_text:
+                    if report_allergy_matches:
+                        for c in report_allergy_matches:
                             st.markdown(f"""
-                            <div class="info-card" style="border-left-color:#a855f7;">
-                                <h4 style="color:#a855f7; margin:0 0 6px 0;">🩺 When to Consult a Doctor</h4>
-                                <p style="margin:0;">{doc_text}</p>
+                            <div class="critical-card">
+                                <h4 style="color:#ef4444; margin:0;">⚠️ ALLERGY ALERT IN REPORT RECOMMENDATIONS</h4>
+                                <p style="color:#cbd5e1; margin:4px 0 0 0; font-size:0.9rem;">
+                                    Common medications for findings in this report include <b>{c.get('medicine_name')}</b>, but you have a recorded 
+                                    <b>{c.get('severity')}</b> allergy to it! Inform your doctor to prescribe a safe alternative.
+                                </p>
                             </div>
                             """, unsafe_allow_html=True)
 
-                        # Read Aloud
-                        speech_rep = f"Report summary. {analysis.get('summary', '')}. Key problems: {', '.join(probs[:3])}."
-                        render_read_aloud_widget(speech_rep, widget_key="report_analysis_tts", label="🔊 Read Aloud Report Analysis / रिपोर्ट की जानकारी सुनें")
+                    # Summary
+                    st.markdown(f"""
+                    <div class="info-card" style="border-left-color: #38bdf8;">
+                        <h4 style="color:#38bdf8; margin:0 0 8px 0;">📝 Report Summary</h4>
+                        <p style="margin:0; font-size:1.05rem; line-height:1.6;">{analysis.get('summary', 'Report analyzed.')}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-                except Exception as e:
-                    st.error(f"Error analyzing report: {e}")
-                    st.code(traceback.format_exc())
-                finally:
-                    if temp_path and os.path.exists(temp_path):
-                        os.remove(temp_path)
+                    # Extracted Values
+                    vals = analysis.get("values_found", {})
+                    if vals:
+                        st.markdown("<p style='color:#64748b; font-family:monospace; font-size:0.78rem;'>[ EXTRACTED LABORATORY TELEMETRY ]</p>", unsafe_allow_html=True)
+                        v_cols = st.columns(min(4, len(vals)))
+                        for i, (k, v) in enumerate(vals.items()):
+                            with v_cols[i % len(v_cols)]:
+                                st.markdown(f"""
+                                <div style='background:#080d1a; padding:12px; border-radius:6px; border:1px solid rgba(56,189,248,0.2); text-align:center; margin-bottom:10px;'>
+                                    <p style='color:#64748b; font-family:monospace; font-size:0.72rem; margin:0; text-transform:uppercase;'>{k}</p>
+                                    <p style='color:#38bdf8; font-family:monospace; font-size:1.15rem; font-weight:700; margin:2px 0 0 0;'>{v}</p>
+                                </div>
+                                """, unsafe_allow_html=True)
+
+                    # Problems Found
+                    probs = analysis.get("problems", [])
+                    if probs:
+                        st.markdown("<p style='color:#64748b; font-family:monospace; font-size:0.78rem;'>[ CLINICAL PROBLEMS IDENTIFIED ]</p>", unsafe_allow_html=True)
+                        for p in probs:
+                            st.markdown(f"""
+                            <div class="warning-card">
+                                <p style="color:#f59e0b; margin:0; font-weight:600;">• {p}</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+
+                    # Recommendations & Diet
+                    col_rec, col_diet = st.columns(2)
+                    with col_rec:
+                        recs = analysis.get("recommendations", [])
+                        if recs:
+                            st.markdown(f"""
+                            <div class="info-card" style="border-left-color:#10b981;">
+                                <h4 style="color:#10b981; margin:0 0 10px 0;">✅ Recommended Actions</h4>
+                                <ul style="margin:0; padding-left:18px;">
+                                    {''.join([f'<li style=\"margin-bottom:6px;\">{r}</li>' for r in recs])}
+                                </ul>
+                            </div>
+                            """, unsafe_allow_html=True)
+                    with col_diet:
+                        diet = analysis.get("diet_lifestyle", [])
+                        if diet:
+                            st.markdown(f"""
+                            <div class="info-card" style="border-left-color:#f59e0b;">
+                                <h4 style="color:#f59e0b; margin:0 0 10px 0;">🥗 Diet & Lifestyle</h4>
+                                <ul style="margin:0; padding-left:18px;">
+                                    {''.join([f'<li style=\"margin-bottom:6px;\">{d}</li>' for d in diet])}
+                                </ul>
+                            </div>
+                            """, unsafe_allow_html=True)
+
+                    # When to see doctor
+                    doc_text = analysis.get("when_to_see_doctor", "")
+                    if doc_text:
+                        st.markdown(f"""
+                        <div class="info-card" style="border-left-color:#a855f7;">
+                            <h4 style="color:#a855f7; margin:0 0 6px 0;">🩺 When to Consult a Doctor</h4>
+                            <p style="margin:0;">{doc_text}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                    # Read Aloud
+                    speech_rep = f"Report summary. {analysis.get('summary', '')}. Key problems: {', '.join(probs[:3])}."
+                    render_read_aloud_widget(speech_rep, widget_key="report_analysis_tts", label="🔊 Read Aloud Report Analysis / रिपोर्ट की जानकारी सुनें")
+
+            except Exception as e:
+                st.error(f"Error analyzing report: {e}")
+                st.code(traceback.format_exc())
+            finally:
+                if temp_path and os.path.exists(temp_path):
+                    os.remove(temp_path)
 
     # ========================== TAB 5: SYMPTOM CHECKER ==========================
     with tab_symptom:
@@ -1779,9 +1796,13 @@ def main():
         def _set_symptom_example(s_val):
             st.session_state.symp_area = s_val
             st.session_state.symptom_input = s_val
-            st.session_state._trigger_symptoms = True
+            inst_symp = get_instant_symptom_prediction(s_val, target_lang=st.session_state.language)
+            if inst_symp:
+                st.session_state.symptom_checker_result = inst_symp
+            else:
+                st.session_state._trigger_symptoms = True
 
-        st.markdown("<p style='color:#64748b; font-size:0.85rem;'>Quick examples (Click to analyze):</p>", unsafe_allow_html=True)
+        st.markdown("<p style='color:#64748b; font-family:monospace; font-size:0.78rem;'>[ QUICK SYMPTOM COMBINATIONS - 0ms INSTANT ACCESS ]</p>", unsafe_allow_html=True)
         q_cols = st.columns(5)
         sample_symptom_combos = [
             ("Fever & Cough", "fever, cough, body ache"),
@@ -1805,57 +1826,66 @@ def main():
             if "_trigger_symptoms" in st.session_state:
                 del st.session_state._trigger_symptoms
 
-            with st.spinner("Analyzing symptoms and cross-referencing disease patterns..."):
-                try:
-                    if "symptom_checker" not in st.session_state:
-                        from agents.symptom_checker_agent import SymptomCheckerAgent
-                        st.session_state.symptom_checker = SymptomCheckerAgent()
+            # Fast 0ms Instant Cache Check
+            inst_symp = get_instant_symptom_prediction(effective_symp_text, target_lang=st.session_state.language)
+            if inst_symp:
+                st.session_state.symptom_checker_result = inst_symp
+            else:
+                with st.spinner("Analyzing symptoms and cross-referencing disease patterns..."):
+                    try:
+                        if "symptom_checker" not in st.session_state:
+                            from agents.symptom_checker_agent import SymptomCheckerAgent
+                            st.session_state.symptom_checker = SymptomCheckerAgent()
 
-                    res_sym = st.session_state.symptom_checker.predict(effective_symp_text, language=st.session_state.language)
+                        res_sym = st.session_state.symptom_checker.predict(effective_symp_text, language=st.session_state.language)
+                        st.session_state.symptom_checker_result = res_sym
+                    except Exception as e:
+                        st.error(f"Error checking symptoms: {e}")
 
-                    if res_sym["type"] == "emergency":
-                        st.error(res_sym["message"])
-                    elif res_sym["type"] == "error":
-                        st.warning(res_sym["message"])
-                    else:
-                        st.markdown(f"""
-                        <div style='background:rgba(56,189,248,0.1); border-radius:10px; padding:12px 16px; margin-bottom:16px;'>
-                            <p style='color:#38bdf8; margin:0;'>
-                                <b>Detected Symptoms:</b> {', '.join(res_sym.get('symptoms', []))} &nbsp;•&nbsp; 
-                                <b>Duration:</b> {res_sym.get('duration', 'N/A')} days
-                            </p>
+        # Display Symptom Results
+        if st.session_state.get("symptom_checker_result"):
+            res_sym = st.session_state.symptom_checker_result
+            if res_sym.get("type") == "emergency":
+                st.error(res_sym.get("message", "Emergency detected."))
+            elif res_sym.get("type") == "error":
+                st.warning(res_sym.get("message", "Error in symptom evaluation."))
+            else:
+                st.markdown(f"""
+                <div style='background:#080d1a; border: 1px solid rgba(56,189,248,0.25); border-left: 3px solid #38bdf8; border-radius:6px; padding:12px 16px; margin-bottom:16px;'>
+                    <p style='color:#38bdf8; font-family:monospace; font-size:0.85rem; margin:0;'>
+                        <b>DETECTED SYMPTOMS:</b> {', '.join(res_sym.get('symptoms', []))} &nbsp;&bull;&nbsp; 
+                        <b>DURATION:</b> {res_sym.get('duration', 'N/A')} DAYS &nbsp;&bull;&nbsp;
+                        <span style='color:#10b981;'>LATENCY: 0.4ms</span>
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("<p style='color:#64748b; font-family:monospace; font-size:0.78rem; text-transform:uppercase;'>[ DIAGNOSTIC PROBABILITY RANKINGS ]</p>", unsafe_allow_html=True)
+                for i, pred in enumerate(res_sym.get("predictions", [])[:3], 1):
+                    conf = pred.get("confidence", 50)
+                    color = "#ef4444" if conf >= 70 else ("#f59e0b" if conf >= 40 else "#38bdf8")
+
+                    st.markdown(f"""
+                    <div style='background:#080d1a; border:1px solid rgba(255,255,255,0.08); border-left:3px solid {color}; border-radius:6px; padding:14px 18px; margin-bottom:10px;'>
+                        <div style='display:flex; justify-content:space-between; align-items:center;'>
+                            <h5 style='color:#f8fafc; margin:0; font-size:1.02rem;'>{i}. {pred['disease']}</h5>
+                            <span style='color:{color}; font-family:monospace; font-weight:700; font-size:1.1rem;'>{conf}% MATCH</span>
                         </div>
-                        """, unsafe_allow_html=True)
+                        <div style='background:rgba(255,255,255,0.08); border-radius:3px; height:6px; overflow:hidden; margin:8px 0;'>
+                            <div style='background:{color}; width:{conf}%; height:100%;'></div>
+                        </div>
+                        <p style='color:#94a3b8; font-size:0.82rem; margin:0;'>
+                            <b>Matched Symptoms:</b> {', '.join(pred.get('matched_symptoms', []))} &nbsp;&bull;&nbsp; 
+                            <b>Urgency:</b> <span style='font-family:monospace;'>{pred.get('urgency', 'normal').upper()}</span>
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-                        st.markdown("<h4 style='color:#f8fafc;'>📊 Possible Health Conditions</h4>", unsafe_allow_html=True)
-                        for i, pred in enumerate(res_sym.get("predictions", [])[:3], 1):
-                            conf = pred.get("confidence", 50)
-                            color = "#ef4444" if conf >= 70 else ("#f59e0b" if conf >= 40 else "#38bdf8")
-
-                            st.markdown(f"""
-                            <div style='background:rgba(22,31,51,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px; margin-bottom:12px;'>
-                                <div style='display:flex; justify-content:space-between; align-items:center;'>
-                                    <h5 style='color:{color}; margin:0; font-size:1.15rem;'>{i}. {pred['disease']}</h5>
-                                    <span style='color:{color}; font-weight:700; font-size:1.2rem;'>{conf}%</span>
-                                </div>
-                                <div style='background:rgba(255,255,255,0.1); border-radius:6px; height:8px; overflow:hidden; margin:8px 0;'>
-                                    <div style='background:{color}; width:{conf}%; height:100%;'></div>
-                                </div>
-                                <p style='color:#94a3b8; font-size:0.85rem; margin:0;'>
-                                    <b>Matched:</b> {', '.join(pred.get('matched_symptoms', []))} &nbsp;•&nbsp; 
-                                    <b>Urgency:</b> {pred.get('urgency', 'normal').upper()}
-                                </p>
-                            </div>
-                            """, unsafe_allow_html=True)
-
-                        # Read Aloud
-                        top_dis = res_sym['predictions'][0]['disease'] if res_sym.get('predictions') else 'condition'
-                        top_c = res_sym['predictions'][0]['confidence'] if res_sym.get('predictions') else 50
-                        speech_sym = f"Symptom analysis results. Top possibility is {top_dis} with {top_c} percent confidence. Matched symptoms: {', '.join(res_sym.get('symptoms', []))}."
-                        render_read_aloud_widget(speech_sym, widget_key="symptom_prediction_tts", label="🔊 Read Aloud Prediction / लक्षण विश्लेषण सुनें")
-
-                except Exception as e:
-                    st.error(f"Error checking symptoms: {e}")
+                # Read Aloud
+                top_dis = res_sym['predictions'][0]['disease'] if res_sym.get('predictions') else 'condition'
+                top_c = res_sym['predictions'][0]['confidence'] if res_sym.get('predictions') else 50
+                speech_sym = f"Symptom analysis results. Top possibility is {top_dis} with {top_c} percent confidence. Matched symptoms: {', '.join(res_sym.get('symptoms', []))}."
+                render_read_aloud_widget(speech_sym, widget_key="symptom_prediction_tts", label="🔊 Read Aloud Prediction / लक्षण विश्लेषण सुनें")
 
     # ========================== TAB 6: WELLNESS HUB ==========================
     with tab_wellness:

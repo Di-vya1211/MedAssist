@@ -2,6 +2,7 @@
 MedAssist - Patient Profile & Health Dashboard UI
 Renders the complete patient profile with registration records (Weight, Height, Blood Type, BMI),
 interactive profile editing, and comprehensive allergy/adverse reaction tracking.
+Tactical dark clinical SaaS aesthetic with 1px hairline borders and high-density readouts.
 """
 
 import streamlit as st
@@ -11,25 +12,25 @@ from typing import Dict, Any, Optional
 def calculate_bmi(weight_kg: Optional[float], height_cm: Optional[float]) -> Dict[str, Any]:
     """Calculates BMI and returns value, status label, and color."""
     if not weight_kg or not height_cm or height_cm <= 0:
-        return {"value": "N/A", "label": "Not Recorded", "color": "#94a3b8", "bg": "rgba(148, 163, 184, 0.1)"}
+        return {"value": "N/A", "label": "NOT RECORDED", "color": "#94a3b8", "bg": "rgba(148, 163, 184, 0.1)"}
     
     height_m = height_cm / 100.0
     bmi = weight_kg / (height_m * height_m)
     bmi_val = round(bmi, 1)
 
     if bmi < 18.5:
-        return {"value": f"{bmi_val}", "label": "Underweight", "color": "#38bdf8", "bg": "rgba(56, 189, 248, 0.15)"}
+        return {"value": f"{bmi_val}", "label": "UNDERWEIGHT", "color": "#38bdf8", "bg": "rgba(56, 189, 248, 0.15)"}
     elif 18.5 <= bmi < 25.0:
-        return {"value": f"{bmi_val}", "label": "Healthy (Normal)", "color": "#10b981", "bg": "rgba(16, 185, 129, 0.15)"}
+        return {"value": f"{bmi_val}", "label": "HEALTHY NORMAL", "color": "#10b981", "bg": "rgba(16, 185, 129, 0.15)"}
     elif 25.0 <= bmi < 30.0:
-        return {"value": f"{bmi_val}", "label": "Overweight", "color": "#f59e0b", "bg": "rgba(245, 158, 11, 0.15)"}
+        return {"value": f"{bmi_val}", "label": "OVERWEIGHT", "color": "#f59e0b", "bg": "rgba(245, 158, 11, 0.15)"}
     else:
-        return {"value": f"{bmi_val}", "label": "Obese", "color": "#ef4444", "bg": "rgba(239, 68, 68, 0.15)"}
+        return {"value": f"{bmi_val}", "label": "OBESE", "color": "#ef4444", "bg": "rgba(239, 68, 68, 0.15)"}
 
 
 def render_patient_dashboard_tab(patient_id: int, db):
     """
-    Renders the complete dashboard & profile tab.
+    Renders the complete tactical dashboard & profile tab.
     """
     # Refresh patient data
     patient = db.get_patient(patient_id)
@@ -59,32 +60,33 @@ def render_patient_dashboard_tab(patient_id: int, db):
     allergies = db.get_allergies(patient_id)
 
     # ═════════════════════════════════════════════════════════════════
-    # 1. WELCOME & PATIENT IDENTITY BANNER
+    # 1. TACTICAL PATIENT IDENTITY CARD
     # ═════════════════════════════════════════════════════════════════
     st.markdown(f"""
-    <div style='background: linear-gradient(135deg, rgba(30, 58, 138, 0.35) 0%, rgba(15, 23, 42, 0.8) 100%);
-                border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 16px; padding: 22px 26px; margin-bottom: 24px;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);'>
+    <div style='background: #080d1a; border: 1px solid rgba(56, 189, 248, 0.22); border-radius: 8px; padding: 18px 22px; margin-bottom: 20px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);'>
         <div style='display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;'>
             <div>
-                <span style='background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);
-                             padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;'>
-                    PATIENT ID #{patient_id}
-                </span>
-                <h2 style='color: #ffffff; margin: 8px 0 4px 0; font-size: 1.8rem; font-weight: 700;'>
-                    👤 {full_name}
+                <div style='display:flex; align-items:center; gap:8px;'>
+                    <span style='background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); padding: 2px 8px; border-radius: 4px; font-family: monospace; font-size: 0.76rem; font-weight: 700;'>
+                        PATIENT // #MED-{patient_id}
+                    </span>
+                    <span style='background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 8px; border-radius: 4px; font-family: monospace; font-size: 0.74rem;'>
+                        ● STATUS: ACTIVE
+                    </span>
+                </div>
+                <h2 style='color: #ffffff; margin: 8px 0 4px 0; font-size: 1.6rem; font-weight: 700; letter-spacing: -0.01em;'>
+                    {full_name}
                 </h2>
-                <p style='color: #94a3b8; margin: 0; font-size: 0.95rem;'>
-                    @{username} • {email} • 📞 {phone} • Registered: {reg_date}
+                <p style='color: #94a3b8; margin: 0; font-family: monospace; font-size: 0.82rem;'>
+                    @{username} • ✉ {email} • 📞 {phone} • REG: {reg_date}
                 </p>
             </div>
             <div style='text-align: right;'>
-                <span style='background: {bmi_info["bg"]}; color: {bmi_info["color"]}; border: 1px solid {bmi_info["color"]};
-                             padding: 6px 14px; border-radius: 12px; font-size: 0.9rem; font-weight: 600;'>
-                    BMI: {bmi_info["value"]} ({bmi_info["label"]})
+                <span style='background: {bmi_info["bg"]}; color: {bmi_info["color"]}; border: 1px solid {bmi_info["color"]}; padding: 4px 12px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; font-weight: 700;'>
+                    BMI: {bmi_info["value"]} [{bmi_info["label"]}]
                 </span>
-                <p style='color: #cbd5e1; font-size: 0.85rem; margin: 8px 0 0 0;'>
-                    Preferred Language: <b style='color:#38bdf8;'>{lang_pref}</b>
+                <p style='color: #cbd5e1; font-family: monospace; font-size: 0.78rem; margin: 6px 0 0 0;'>
+                    LANGUAGE // <b style='color:#38bdf8;'>{lang_pref.upper()}</b>
                 </p>
             </div>
         </div>
@@ -94,70 +96,70 @@ def render_patient_dashboard_tab(patient_id: int, db):
     # ═════════════════════════════════════════════════════════════════
     # 2. VITAL REGISTRATION RECORDS GRID
     # ═════════════════════════════════════════════════════════════════
-    st.markdown("<h3 style='color: #f8fafc; font-size: 1.25rem; margin-bottom: 14px;'>📊 Patient Registration & Vital Records</h3>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #64748b; font-family: monospace; font-size: 0.78rem; text-transform: uppercase; margin: 0 0 10px 0; font-weight: 700;'>[ CLINICAL BIOMETRIC TELEMETRY ]</p>", unsafe_allow_html=True)
 
     v1, v2, v3, v4, v5 = st.columns(5)
 
     with v1:
         st.markdown(f"""
-        <div style='background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 12px; padding: 16px; text-align: center;'>
-            <p style='color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 600;'>⚖️ Weight</p>
-            <p style='color: #38bdf8; font-size: 1.6rem; font-weight: 700; margin: 0;'>{weight_kg} <span style='font-size: 0.9rem; font-weight: 400;'>kg</span></p>
+        <div style='background: #080d1a; border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 6px; padding: 14px 10px; text-align: center;'>
+            <p style='color: #64748b; font-family: monospace; font-size: 0.72rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 700;'>WEIGHT</p>
+            <p style='color: #38bdf8; font-family: monospace; font-size: 1.5rem; font-weight: 700; margin: 0;'>{weight_kg} <span style='font-size: 0.8rem; font-weight: 400;'>KG</span></p>
         </div>
         """, unsafe_allow_html=True)
 
     with v2:
         st.markdown(f"""
-        <div style='background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 12px; padding: 16px; text-align: center;'>
-            <p style='color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 600;'>📏 Height</p>
-            <p style='color: #38bdf8; font-size: 1.6rem; font-weight: 700; margin: 0;'>{height_cm} <span style='font-size: 0.9rem; font-weight: 400;'>cm</span></p>
+        <div style='background: #080d1a; border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 6px; padding: 14px 10px; text-align: center;'>
+            <p style='color: #64748b; font-family: monospace; font-size: 0.72rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 700;'>HEIGHT</p>
+            <p style='color: #38bdf8; font-family: monospace; font-size: 1.5rem; font-weight: 700; margin: 0;'>{height_cm} <span style='font-size: 0.8rem; font-weight: 400;'>CM</span></p>
         </div>
         """, unsafe_allow_html=True)
 
     with v3:
         st.markdown(f"""
-        <div style='background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 12px; padding: 16px; text-align: center;'>
-            <p style='color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 600;'>🩸 Blood Group</p>
-            <p style='color: #ef4444; font-size: 1.6rem; font-weight: 700; margin: 0;'>{blood_type}</p>
+        <div style='background: #080d1a; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; padding: 14px 10px; text-align: center;'>
+            <p style='color: #64748b; font-family: monospace; font-size: 0.72rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 700;'>BLOOD GROUP</p>
+            <p style='color: #ef4444; font-family: monospace; font-size: 1.5rem; font-weight: 700; margin: 0;'>{blood_type}</p>
         </div>
         """, unsafe_allow_html=True)
 
     with v4:
         st.markdown(f"""
-        <div style='background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 16px; text-align: center;'>
-            <p style='color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 600;'>🎂 Age & Sex</p>
-            <p style='color: #10b981; font-size: 1.4rem; font-weight: 700; margin: 0;'>{age} <span style='font-size: 0.9rem; font-weight: 400;'>yrs • {gender}</span></p>
+        <div style='background: #080d1a; border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 14px 10px; text-align: center;'>
+            <p style='color: #64748b; font-family: monospace; font-size: 0.72rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 700;'>AGE / SEX</p>
+            <p style='color: #10b981; font-family: monospace; font-size: 1.35rem; font-weight: 700; margin: 0;'>{age} <span style='font-size: 0.8rem; font-weight: 400;'>YRS • {gender}</span></p>
         </div>
         """, unsafe_allow_html=True)
 
     with v5:
         allergy_color = "#ef4444" if allergies else "#10b981"
         st.markdown(f"""
-        <div style='background: rgba(15, 23, 42, 0.7); border: 1px solid {allergy_color}33; border-radius: 12px; padding: 16px; text-align: center;'>
-            <p style='color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 600;'>🛡️ Known Allergies</p>
-            <p style='color: {allergy_color}; font-size: 1.6rem; font-weight: 700; margin: 0;'>{len(allergies)} <span style='font-size: 0.9rem; font-weight: 400;'>drugs</span></p>
+        <div style='background: #080d1a; border: 1px solid {allergy_color}44; border-radius: 6px; padding: 14px 10px; text-align: center;'>
+            <p style='color: #64748b; font-family: monospace; font-size: 0.72rem; text-transform: uppercase; margin: 0 0 4px 0; font-weight: 700;'>ALLERGY GUARD</p>
+            <p style='color: {allergy_color}; font-family: monospace; font-size: 1.5rem; font-weight: 700; margin: 0;'>{len(allergies)} <span style='font-size: 0.8rem; font-weight: 400;'>DRUGS</span></p>
         </div>
         """, unsafe_allow_html=True)
 
     # Secondary Contacts Card
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1:
         st.markdown(f"""
-        <div style='background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px 18px;'>
-            <h5 style='color: #f59e0b; margin: 0 0 6px 0;'>🚨 Emergency Contact</h5>
-            <p style='color: #cbd5e1; margin: 0; font-size: 0.9rem;'>
-                <b>{emergency_name}</b> • Phone: <span style='color:#38bdf8;'>{emergency_phone}</span>
+        <div style='background: #080d1a; border: 1px solid rgba(245, 158, 11, 0.25); border-left: 3px solid #f59e0b; border-radius: 6px; padding: 12px 16px;'>
+            <p style='color: #f59e0b; font-family: monospace; font-size: 0.75rem; font-weight: 700; margin: 0 0 4px 0;'>EMERGENCY CONTACT</p>
+            <p style='color: #f8fafc; margin: 0; font-size: 0.88rem;'>
+                <b>{emergency_name}</b> &nbsp;•&nbsp; <span style='color:#38bdf8; font-family: monospace;'>📞 {emergency_phone}</span>
             </p>
         </div>
         """, unsafe_allow_html=True)
 
     with c2:
         st.markdown(f"""
-        <div style='background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px 18px;'>
-            <h5 style='color: #38bdf8; margin: 0 0 6px 0;'>👨‍⚕️ Assigned Doctor</h5>
-            <p style='color: #cbd5e1; margin: 0; font-size: 0.9rem;'>
-                <b>{doctor_name}</b> • Phone: <span style='color:#38bdf8;'>{doctor_phone}</span>
+        <div style='background: #080d1a; border: 1px solid rgba(56, 189, 248, 0.25); border-left: 3px solid #38bdf8; border-radius: 6px; padding: 12px 16px;'>
+            <p style='color: #38bdf8; font-family: monospace; font-size: 0.75rem; font-weight: 700; margin: 0 0 4px 0;'>ASSIGNED CLINICIAN</p>
+            <p style='color: #f8fafc; margin: 0; font-size: 0.88rem;'>
+                <b>{doctor_name}</b> &nbsp;•&nbsp; <span style='color:#38bdf8; font-family: monospace;'>📞 {doctor_phone}</span>
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -179,7 +181,7 @@ def render_patient_dashboard_tab(patient_id: int, db):
             new_em_name = st.text_input("Emergency Contact Person", value=emergency_name if emergency_name != "Not provided" else "", key="edit_em_name")
             new_em_phone = st.text_input("Emergency Phone", value=emergency_phone if emergency_phone != "Not provided" else "", key="edit_em_phone")
 
-        up3_1, up3_2 = st.columns([1, 1])
+        up3_1, _ = st.columns([1, 1])
         with up3_1:
             lang_choices = ["English", "Hindi", "Bengali", "Tamil", "Telugu", "Marathi"]
             curr_choice_idx = lang_choices.index(lang_pref) if lang_pref in lang_choices else 0
@@ -210,12 +212,12 @@ def render_patient_dashboard_tab(patient_id: int, db):
     # ═════════════════════════════════════════════════════════════════
     # 4. PATIENT ALLERGIES & ADVERSE DRUG REACTION RECORDS
     # ═════════════════════════════════════════════════════════════════
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
     st.markdown("""
     <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;'>
         <div>
-            <h3 style='color: #f8fafc; font-size: 1.3rem; margin: 0;'>🛡️ Patient Drug Allergy & Adverse Reaction Records</h3>
-            <p style='color: #94a3b8; font-size: 0.85rem; margin: 4px 0 0 0;'>
+            <h3 style='color: #f8fafc; font-size: 1.2rem; margin: 0;'>🛡️ Patient Drug Allergy & Adverse Reaction Records</h3>
+            <p style='color: #94a3b8; font-size: 0.82rem; margin: 2px 0 0 0;'>
                 MedAssist strictly protects you by avoiding all recorded allergic drugs in recommendations across all modules.
             </p>
         </div>
@@ -224,9 +226,9 @@ def render_patient_dashboard_tab(patient_id: int, db):
 
     if not allergies:
         st.markdown("""
-        <div style='background: rgba(16, 185, 129, 0.08); border: 1px dashed rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 20px; text-align: center;'>
-            <p style='color: #10b981; font-size: 1rem; margin: 0; font-weight: 600;'>✅ No Drug Allergies Recorded</p>
-            <p style='color: #94a3b8; font-size: 0.85rem; margin: 6px 0 0 0;'>
+        <div style='background: #080d1a; border: 1px dashed rgba(16, 185, 129, 0.35); border-radius: 6px; padding: 18px; text-align: center;'>
+            <p style='color: #10b981; font-family: monospace; font-size: 0.88rem; margin: 0; font-weight: 700;'>● NO DRUG ALLERGIES CURRENTLY RECORDED</p>
+            <p style='color: #94a3b8; font-size: 0.82rem; margin: 4px 0 0 0;'>
                 If you ever face an allergy, rash, or side effect after taking any medicine, record it below so our model will remember it and protect you in the future.
             </p>
         </div>
@@ -243,32 +245,29 @@ def render_patient_dashboard_tab(patient_id: int, db):
             if severity == "Severe":
                 sev_color = "#ef4444"
                 sev_bg = "rgba(239, 68, 68, 0.15)"
-                sev_emoji = "🚨"
             elif severity == "Moderate":
                 sev_color = "#f59e0b"
                 sev_bg = "rgba(245, 158, 11, 0.15)"
-                sev_emoji = "⚠️"
             else:
                 sev_color = "#38bdf8"
                 sev_bg = "rgba(56, 189, 248, 0.15)"
-                sev_emoji = "ℹ️"
 
             col_allg, col_del = st.columns([5, 1])
 
             with col_allg:
                 st.markdown(f"""
-                <div style='background: rgba(15, 23, 42, 0.7); border-left: 4px solid {sev_color}; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px;'>
+                <div style='background: #080d1a; border: 1px solid rgba(255,255,255,0.08); border-left: 3px solid {sev_color}; border-radius: 6px; padding: 12px 16px; margin-bottom: 8px;'>
                     <div style='display:flex; justify-content:space-between; align-items:center;'>
-                        <h4 style='color:#f8fafc; margin:0; font-size:1.05rem;'>{sev_emoji} <b>{med_name}</b></h4>
-                        <span style='background:{sev_bg}; color:{sev_color}; padding:2px 10px; border-radius:12px; font-size:0.75rem; font-weight:700;'>
+                        <h4 style='color:#f8fafc; margin:0; font-size:0.98rem;'>🛡️ <b>{med_name}</b></h4>
+                        <span style='background:{sev_bg}; color:{sev_color}; border: 1px solid {sev_color}; padding:2px 8px; border-radius:4px; font-family: monospace; font-size:0.72rem; font-weight:700;'>
                             {severity.upper()} REACTION
                         </span>
                     </div>
-                    <p style='color:#cbd5e1; font-size:0.85rem; margin:6px 0 2px 0;'>
-                        <b>Symptoms Faced:</b> {symptoms}
+                    <p style='color:#cbd5e1; font-size:0.82rem; margin:6px 0 2px 0;'>
+                        <b>Symptoms:</b> {symptoms}
                     </p>
-                    {f"<p style='color:#94a3b8; font-size:0.8rem; margin:0;'><b>Notes:</b> {notes}</p>" if notes else ""}
-                    <p style='color:#64748b; font-size:0.75rem; margin:4px 0 0 0;'>Reported on: {date_str}</p>
+                    {f"<p style='color:#94a3b8; font-size:0.78rem; margin:0;'><b>Notes:</b> {notes}</p>" if notes else ""}
+                    <p style='color:#64748b; font-family: monospace; font-size:0.72rem; margin:4px 0 0 0;'>REPORTED: {date_str}</p>
                 </div>
                 """, unsafe_allow_html=True)
 
