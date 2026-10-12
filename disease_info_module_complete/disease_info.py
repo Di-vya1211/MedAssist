@@ -485,26 +485,26 @@ class DiseaseInfoRetriever:
             for doc in docs[:8]
         ])
 
-        return f"""You are MedAssist, a rural health information assistant.
-Answer STRICTLY from the provided MedlinePlus sources below.
-NEVER use outside medical knowledge.
+        return f"""You are MedAssist, an authoritative clinical health assistant.
+Provide comprehensive, evidence-based medical information for: "{disease_name}".
+Synthesize the provided reference sources below and supplement with established WHO, ICMR, and MedlinePlus clinical standards.
 
 RULES:
-1. If sources do NOT discuss "{disease_name}", write "Information not available in sources." for EVERY field.
-2. IGNORE drug labels or product inserts (text starting with "This product", "Ask a doctor before use", etc.).
-3. List only COMMON and PRIMARY symptoms, tests, treatment for "{disease_name}".
-4. Return ONLY valid JSON. No markdown, no explanations, no comments.
+1. Provide accurate clinical descriptions, primary symptoms, diagnostic tests, precautions, and treatments specific to "{disease_name}".
+2. Do NOT leave fields blank, and NEVER output "Information not available in sources." Ensure each section is clinically accurate and detailed.
+3. List 8 to 12 specific, real clinical diagnostic test names.
+4. Return ONLY valid JSON. No markdown fences, no explanations, no comments.
 
 REQUIRED JSON FORMAT:
 {{
     "disease_name": "{disease_name}",
-    "description": "2-3 sentence overview from sources ONLY. Never leave empty.",
-    "symptoms": ["symptom 1", "symptom 2", "symptom 3"],
-    "diagnostic_tests": ["Test 1", "Test 2", "Test 3", "Test 4", "Test 5", "Test 6", "Test 7", "Test 8"],
-    "precautions": ["precaution 1", "precaution 2"],
-    "treatment": ["treatment 1", "treatment 2"],
-    "risk_factors": ["risk 1", "risk 2"],
-    "when_to_see_a_doctor": "guidance from sources. Never leave empty.",
+    "description": "2-3 comprehensive clinical overview sentences explaining causes, pathology, and impact.",
+    "symptoms": ["Primary symptom 1", "Symptom 2", "Symptom 3", "Symptom 4", "Symptom 5"],
+    "diagnostic_tests": ["Specific Test 1", "Specific Test 2", "Specific Test 3", "Specific Test 4", "Specific Test 5", "Specific Test 6", "Specific Test 7", "Specific Test 8"],
+    "precautions": ["Precaution 1", "Precaution 2", "Precaution 3"],
+    "treatment": ["Treatment 1", "Treatment 2", "Treatment 3"],
+    "risk_factors": ["Risk factor 1", "Risk factor 2", "Risk factor 3"],
+    "when_to_see_a_doctor": "Clear clinical threshold when immediate doctor or emergency consultation is needed.",
     "confidence": "high"
 }}
 
@@ -791,13 +791,20 @@ REQUIRED JSON FORMAT:
             print(f"[DEBUG] LLM call failed: {e}")
             return self._fallback(canonical_name, docs, str(e))
 
-        if not parsed or "description" not in parsed:
-            print("[DEBUG] LLM returned empty or invalid JSON, using fallback")
-            return self._fallback(canonical_name, docs, "Invalid JSON from LLM")
+        desc = (parsed.get("description") or "").strip()
+        if not parsed or not desc or "not available in sources" in desc.lower() or len(desc) < 25:
+            print(f"[DEBUG] Stub or empty description for {canonical_name}, engaging curated fallback")
+            return self._fallback(canonical_name, docs, "Sparse LLM response")
 
         # Sanitize list fields
         for field in ["symptoms", "diagnostic_tests", "precautions", "treatment", "risk_factors"]:
             self._sanitize_list_field(parsed, field)
+
+        # If symptoms or tests contain 'not available in sources', trigger fallback
+        symps = parsed.get("symptoms", [])
+        if any("not available in sources" in str(s).lower() for s in symps):
+            print(f"[DEBUG] Sparse symptoms for {canonical_name}, engaging curated fallback")
+            return self._fallback(canonical_name, docs, "Sparse symptoms")
 
         # ===== CLEAN OUTPUT (REMOVE BAD PATTERNS) =====
         self._clean_output(parsed, canonical_name)
@@ -841,6 +848,15 @@ REQUIRED JSON FORMAT:
         ]
 
         curated_fallbacks = {
+            "cancer": {
+                "desc": "Cancer is a complex group of diseases characterized by uncontrolled cellular proliferation and tissue invasion, capable of metastasizing to regional lymph nodes and distant organs.",
+                "symptoms": ["Unexplained significant weight loss (> 5 kg)", "Persistent extreme fatigue not relieved by rest", "Palpable painless lump or thickening in breast, neck, or axilla", "Chronic cough, hoarseness, or difficulty swallowing", "Unexplained bleeding (blood in stool, urine, or sputum)", "Noticeable changes in skin moles or non-healing sores"],
+                "tests": ["Histopathological Tissue Biopsy (Core or Excisional Biopsy)", "Positron Emission Tomography (PET-CT Scan)", "Magnetic Resonance Imaging (Contrast MRI)", "Contrast-Enhanced CT Scan", "Serum Tumor Markers (CEA, CA-125, PSA, AFP)", "Complete Blood Count (CBC) with Peripheral Smear", "Bone Marrow Aspiration and Biopsy", "Immunohistochemistry (IHC) Panel"],
+                "precautions": ["Eliminate all forms of tobacco use (smoking, chewing tobacco, vaping)", "Limit alcohol consumption and avoid excessive sun/UV exposure", "Maintain a healthy body weight and consume an antioxidant-rich Mediterranean diet", "Adhere to routine cancer screening guidelines (Mammograms, Pap smear, Colonoscopy)", "Vaccinate against HPV and Hepatitis B"],
+                "treatment": ["Surgical oncological resection or debulking by an oncological surgeon", "Systemic chemotherapy regimens tailored to histological subtype", "Targeted radiation therapy (IMRT, stereotactic radiosurgery)", "Immunotherapy (immune checkpoint inhibitors) and molecular targeted therapies", "Palliative and supportive pain management"],
+                "risks": ["Tobacco smoking and chewing tobacco usage", "Genetic mutations (BRCA1, BRCA2, Lynch syndrome)", "Exposure to environmental and industrial carcinogens (asbestos, benzene, radiation)", "Chronic oncogenic infections (HPV, Hepatitis B/C, EBV) and advanced age"],
+                "when_to_see": "Seek immediate evaluation by an oncologist or clinician if you detect a new painless lump, persistent unexplained weight loss, difficulty swallowing, or blood in cough or stool."
+            },
             "diabetes": {
                 "desc": "Diabetes mellitus is a chronic metabolic condition characterized by persistent hyperglycemia resulting from insulin deficiency, insulin resistance, or both.",
                 "symptoms": ["Frequent urination (polyuria)", "Excessive thirst (polydipsia)", "Unexplained weight loss", "Extreme hunger", "Fatigue and lethargy", "Blurred vision"],

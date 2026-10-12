@@ -211,6 +211,23 @@ Clinical Response Instructions:
         """Domain-grounded clinical fallback when LLM API is unavailable."""
         q_low = clean_msg.lower()
 
+        # 0. Check pre-indexed clinical disease knowledge base first (Cancer, TB, Malaria, etc.)
+        try:
+            from core.instant_cache import get_instant_disease
+            inst_d = get_instant_disease(clean_msg, target_lang='hi' if is_hindi else 'en')
+            if inst_d:
+                name = inst_d.get("disease_name", "")
+                desc = inst_d.get("description", "")
+                symps = ", ".join(inst_d.get("symptoms", [])[:3])
+                prec = ", ".join(inst_d.get("precautions", [])[:2])
+                treat = ", ".join(inst_d.get("treatment", [])[:2])
+                if is_hindi:
+                    return f"**{name}**\n\n{desc}\n\n**प्रमुख लक्षण:** {symps}\n\n**प्रमुख सावधानियां:** {prec}\n\n**चिकित्सीय दिशा-निर्देश:** {treat}। सटीक जांच और उपचार के लिए डॉक्टर से अवश्य परामर्श लें।"
+                else:
+                    return f"**{name}**\n\n{desc}\n\n**Primary Symptoms:** {symps}\n\n**Key Precautions:** {prec}\n\n**Clinical Guidance:** {treat}. Always consult a specialist clinician for diagnostic confirmation and staging."
+        except Exception:
+            pass
+
         # 1. Hairfall / Hair loss
         if any(w in q_low for w in ["hairfall", "hair fall", "hair loss", "hair", "baal", "balo", "balon"]):
             if is_hindi:

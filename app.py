@@ -1042,8 +1042,8 @@ def main():
                 st.session_state._trigger_disease = True
 
         st.markdown('<p style="color:#64748b; font-family:monospace; font-size:0.78rem; margin-top:8px;">[ QUICK CLINICAL PROTOCOLS - 0ms INSTANT ACCESS ]</p>', unsafe_allow_html=True)
-        ex_cols = st.columns(5)
-        disease_examples = ["Diabetes", "Asthma", "Pneumonia", "Arthritis", "Coronavirus"]
+        ex_cols = st.columns(6)
+        disease_examples = ["Diabetes", "Asthma", "Cancer", "Tuberculosis", "Pneumonia", "Malaria"]
         for i, ex in enumerate(disease_examples):
             with ex_cols[i]:
                 st.button(ex, key=f"dis_ex_{ex}", on_click=_set_disease_example, args=(ex,), use_container_width=True)

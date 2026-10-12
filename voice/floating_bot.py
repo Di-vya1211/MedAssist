@@ -67,19 +67,19 @@ def open_medassist_bot_dialog(patient_id: Optional[int] = None, patient_db = Non
     b64 = get_bot_avatar_b64()
     is_hindi = st.session_state.get("language", "en") == "hi"
 
-    # Tactical Telemetry Header Card
+    # Clinical Telemetry Header Card with Bot Avatar
     st.markdown(f"""
-    <div style='background: #080e1e; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.4);'>
-        <div style='display: flex; justify-content: space-between; align-items: center;'>
-            <div style='display: flex; align-items: center; gap: 10px;'>
-                <div style='width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;'></div>
-                <span style='font-family: monospace; font-size: 0.88rem; color: #38bdf8; font-weight: 700; letter-spacing: 0.05em;'>MEDASSIST AI // PROTOCOL ACTIVE</span>
+    <div style='background: #080e1e; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); display: flex; align-items: center; gap: 12px;'>
+        <img src="data:image/png;base64,{b64}" style="width: 44px; height: 44px; border-radius: 50%; border: 2px solid #38bdf8; object-fit: cover; flex-shrink: 0;" alt="Bot Avatar" />
+        <div style='flex: 1;'>
+            <div style='display: flex; justify-content: space-between; align-items: center;'>
+                <span style='font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 0.92rem; color: #38bdf8; font-weight: 700; letter-spacing: 0.02em;'>MedAssist AI Clinical Companion</span>
+                <span style='font-family: monospace; font-size: 0.70rem; color: #10b981; background: rgba(16,185,129,0.1); border: 1px solid #10b981; padding: 1px 6px; border-radius: 4px;'>● ONLINE</span>
             </div>
-            <span style='font-family: monospace; font-size: 0.72rem; color: #94a3b8; background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);'>LATENCY: 0.8ms</span>
+            <p style='margin: 3px 0 0 0; color: #cbd5e1; font-size: 0.76rem;'>
+                Clinical Decision Support • Active Allergy Safeguard Armed
+            </p>
         </div>
-        <p style='margin: 4px 0 0 0; color: #cbd5e1; font-size: 0.78rem;'>
-            Clinical Decision Support Engine • Allergy Cross-Check Guard Armed
-        </p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -268,107 +268,118 @@ def _process_bot_query(query: str, patient_id: Optional[int], patient_db):
 
 def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
     """
-    Renders the tactical AI Companion HUD pill dock in the bottom-right corner.
-    Zero cartoon bobbing animation. Crisp 1px cyan borders, high-density telemetry.
+    Renders the floating AI health companion robot avatar in the bottom-right corner.
+    Crisp circular avatar with the 3D robot head image from assets/bot_avatar.png,
+    speech bubble, subtle glowing ring, and instant dialog trigger.
     """
     init_floating_bot_state()
+    b64 = get_bot_avatar_b64()
     is_hindi = st.session_state.get("language", "en") == "hi"
-    hud_sub = "LIVE • VOICE READY" if not is_hindi else "लाइव • आवाज़ तैयार"
+    speech_text = "Ask Me! 💬" if not is_hindi else "पूछिए! 💬"
 
     st.html(f"""
     <style>
-    /* Fixed Tactical HUD Pill Dock Container */
+    /* Fixed Bot Avatar Container */
     #medassist-bot-container {{
         position: fixed !important;
-        bottom: 22px !important;
-        right: 24px !important;
+        bottom: 25px !important;
+        right: 25px !important;
         z-index: 100000005 !important;
-        pointer-events: none !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+        cursor: pointer !important;
+        pointer-events: auto !important;
     }}
 
-    /* Tactical HUD Dock Pill */
-    .hud-bot-dock {{
-        background: rgba(6, 11, 22, 0.95);
-        border: 1px solid rgba(56, 189, 248, 0.4);
-        border-radius: 8px;
-        padding: 8px 16px;
+    /* Floating Speech Bubble */
+    .bot-speech-bubble {{
+        background: #080e1e;
+        color: #38bdf8;
+        border: 1px solid #38bdf8;
+        padding: 6px 14px;
+        border-radius: 14px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 0.82rem;
+        font-weight: 700;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+        position: relative;
+        white-space: nowrap;
+        pointer-events: none;
+        user-select: none;
+        letter-spacing: 0.02em;
+    }}
+
+    .bot-speech-bubble::after {{
+        content: '';
+        position: absolute;
+        right: -6px;
+        top: calc(50% - 5px);
+        width: 10px;
+        height: 10px;
+        background: #080e1e;
+        border-right: 1px solid #38bdf8;
+        border-bottom: 1px solid #38bdf8;
+        transform: rotate(-45deg);
+    }}
+
+    /* Hide speech bubble when dialog is open so they don't overlap */
+    body:has(div[data-testid="stDialog"]) .bot-speech-bubble,
+    body:has(div.stDialog) .bot-speech-bubble,
+    body:has(div[role="dialog"]) .bot-speech-bubble {{
+        display: none !important;
+    }}
+
+    /* 3D Robot Head Circular Avatar Visual */
+    .bot-avatar-circle {{
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background-color: #080e1e;
+        border: 2.5px solid #38bdf8;
+        box-shadow: 0 8px 24px rgba(2, 132, 199, 0.6), 0 0 16px rgba(56, 189, 248, 0.4);
+        cursor: pointer;
+        overflow: hidden;
         display: flex;
         align-items: center;
-        gap: 12px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 12px rgba(56, 189, 248, 0.2);
-        cursor: pointer;
-        backdrop-filter: blur(12px);
-        transition: all 0.2s ease-in-out;
+        justify-content: center;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         user-select: none;
     }}
 
-    .hud-bot-dock:hover {{
-        border-color: #38bdf8;
-        box-shadow: 0 8px 28px rgba(56, 189, 248, 0.35), 0 0 18px rgba(56, 189, 248, 0.3);
-        transform: translateY(-2px);
+    .bot-avatar-circle img {{
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        pointer-events: none;
     }}
 
-    /* Pulsing Green Status LED */
-    .hud-status-dot {{
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #10b981;
-        box-shadow: 0 0 8px #10b981;
-        animation: hudPulse 2s infinite ease-in-out;
+    .bot-avatar-circle:hover {{
+        transform: scale(1.08) translateY(-2px);
+        box-shadow: 0 12px 32px rgba(56, 189, 248, 0.8), 0 0 22px rgba(56, 189, 248, 0.6);
+        border-color: #ffffff;
     }}
 
-    @keyframes hudPulse {{
-        0%, 100% {{ opacity: 1; transform: scale(1); }}
-        50% {{ opacity: 0.5; transform: scale(0.85); }}
+    /* Glowing indicator when dialog is active */
+    body:has(div[data-testid="stDialog"]) .bot-avatar-circle,
+    body:has(div.stDialog) .bot-avatar-circle,
+    body:has(div[role="dialog"]) .bot-avatar-circle {{
+        border-color: #38bdf8 !important;
+        box-shadow: 0 0 25px rgba(56, 189, 248, 0.9) !important;
     }}
 
-    /* Telemetry Text */
-    .hud-dock-info {{
-        display: flex;
-        flex-direction: column;
-    }}
-
-    .hud-dock-title {{
-        font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace;
-        font-size: 0.8rem;
-        font-weight: 700;
-        color: #f8fafc;
-        letter-spacing: 0.05em;
-        line-height: 1.2;
-    }}
-
-    .hud-dock-sub {{
-        font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace;
-        font-size: 0.68rem;
-        color: #38bdf8;
-        letter-spacing: 0.03em;
-        margin-top: 2px;
-    }}
-
-    .hud-dock-action {{
-        background: rgba(56, 189, 248, 0.12);
-        border: 1px solid rgba(56, 189, 248, 0.3);
-        border-radius: 4px;
-        padding: 3px 8px;
-        font-family: monospace;
-        font-size: 0.72rem;
-        color: #38bdf8;
-        font-weight: 700;
-    }}
-
-    /* Position the native Streamlit button layer right over the dock */
+    /* Position the native Streamlit button layer right on top of the 72px robot */
     div[data-testid="stElementContainer"]:has(#medassist-native-btn-marker) + div[data-testid="stElementContainer"] {{
         position: fixed !important;
-        bottom: 22px !important;
-        right: 24px !important;
-        width: 260px !important;
-        height: 48px !important;
+        bottom: 25px !important;
+        right: 25px !important;
+        width: 72px !important;
+        height: 72px !important;
         z-index: 100000050 !important;
         margin: 0 !important;
         padding: 0 !important;
         overflow: hidden !important;
-        border-radius: 8px !important;
+        border-radius: 50% !important;
     }}
 
     body:has(div[data-testid="stDialog"]) div[data-testid="stElementContainer"]:has(#medassist-native-btn-marker) + div[data-testid="stElementContainer"],
@@ -378,11 +389,11 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
     }}
 
     div[data-testid="stElementContainer"]:has(#medassist-native-btn-marker) + div[data-testid="stElementContainer"] button {{
-        width: 260px !important;
-        height: 48px !important;
-        min-width: 260px !important;
-        min-height: 48px !important;
-        border-radius: 8px !important;
+        width: 72px !important;
+        height: 72px !important;
+        min-width: 72px !important;
+        min-height: 72px !important;
+        border-radius: 50% !important;
         opacity: 0 !important;
         cursor: pointer !important;
         border: none !important;
@@ -391,16 +402,126 @@ def render_floating_bot(patient_id: Optional[int] = None, patient_db = None):
         margin: 0 !important;
         pointer-events: auto !important;
     }}
+
+    /* ========================================================
+       FLOATING AI BOT DIALOG AS SIDE CARD (BOTTOM-RIGHT)
+       ======================================================== */
+    /* 1. Backdrop */
+    div[data-baseweb="modal"],
+    div[data-baseweb="modal"] > div,
+    div[data-testid="stDialog"],
+    div.stDialog,
+    .e1mymz5c0 {{
+        position: fixed !important;
+        inset: 0 !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        display: flex !important;
+        align-items: flex-end !important;
+        justify-content: flex-end !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        z-index: 99999999 !important;
+    }}
+
+    /* 2. Inner Dialog Card: Fixed at bottom-right corner directly above the 3D bot */
+    div[data-testid="stDialog"] > div,
+    div.stDialog > div,
+    div[role="dialog"],
+    .e1mymz5c1 {{
+        position: fixed !important;
+        bottom: 105px !important;
+        right: 25px !important;
+        inset: auto !important;
+        top: auto !important;
+        left: auto !important;
+        margin: 0 !important;
+        width: 410px !important;
+        max-width: calc(100vw - 35px) !important;
+        height: 560px !important;
+        max-height: calc(100vh - 125px) !important;
+        background: #0b1120 !important;
+        background-color: #0b1120 !important;
+        border: 2px solid #38bdf8 !important;
+        border-radius: 16px !important;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95), 0 0 30px rgba(56, 189, 248, 0.35) !important;
+        overflow-y: auto !important;
+        padding: 1.1rem 1.25rem !important;
+        display: flex !important;
+        flex-direction: column !important;
+        pointer-events: auto !important;
+        transform-origin: bottom right !important;
+        animation: botPopupFromBot 0.25s ease-out !important;
+    }}
+
+    @keyframes botPopupFromBot {{
+        0% {{
+            opacity: 0;
+            transform: scale(0.3) translateY(60px);
+        }}
+        100% {{
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }}
+    }}
+
+    div[data-testid="stDialog"] h2,
+    div.stDialog h2,
+    div[role="dialog"] h2 {{
+        font-size: 1.05rem !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        color: #f8fafc !important;
+        font-weight: 700 !important;
+    }}
+
+    div[data-testid="stDialog"] button[aria-label="Close"],
+    div.stDialog button[aria-label="Close"],
+    div[role="dialog"] button[aria-label="Close"],
+    .e1mymz5c3 {{
+        color: #94a3b8 !important;
+        top: 14px !important;
+        right: 14px !important;
+        font-size: 1.2rem !important;
+        border-radius: 8px !important;
+        transition: all 0.2s ease !important;
+    }}
+    div[data-testid="stDialog"] button[aria-label="Close"]:hover,
+    div.stDialog button[aria-label="Close"]:hover,
+    div[role="dialog"] button[aria-label="Close"]:hover,
+    .e1mymz5c3:hover {{
+        color: #f43f5e !important;
+        background: rgba(244, 63, 94, 0.15) !important;
+        transform: scale(1.1) !important;
+    }}
+
+    div[data-testid="stDialog"] > div::-webkit-scrollbar,
+    div.stDialog > div::-webkit-scrollbar,
+    div[role="dialog"]::-webkit-scrollbar,
+    .e1mymz5c1::-webkit-scrollbar {{
+        width: 6px !important;
+    }}
+    div[data-testid="stDialog"] > div::-webkit-scrollbar-thumb,
+    div.stDialog > div::-webkit-scrollbar-thumb,
+    div[role="dialog"]::-webkit-scrollbar-thumb,
+    .e1mymz5c1::-webkit-scrollbar-thumb {{
+        background: rgba(56, 189, 248, 0.3) !important;
+        border-radius: 10px !important;
+    }}
     </style>
 
     <div id="medassist-bot-container" onclick="medassistClickBotToggle()">
-        <div class="hud-bot-dock" title="Click to open MedAssist AI Clinical HUD / क्लीनिकल चैट खोलने के लिए क्लिक करें" onclick="medassistClickBotToggle(); event.stopPropagation();">
-            <div class="hud-status-dot"></div>
-            <div class="hud-dock-info">
-                <div class="hud-dock-title">MEDASSIST AI // PROTOCOL</div>
-                <div class="hud-dock-sub">⚡ {hud_sub}</div>
-            </div>
-            <div class="hud-dock-action">HUD 💬</div>
+        <div class="bot-speech-bubble" onclick="medassistClickBotToggle(); event.stopPropagation();">
+            {speech_text}
+        </div>
+        <div class="bot-avatar-circle" title="Click to chat with MedAssist AI / चैट खोलने या बंद करने के लिए क्लिक करें" onclick="medassistClickBotToggle(); event.stopPropagation();">
+            <img src="data:image/png;base64,{b64}" alt="MedAssist AI Bot" />
         </div>
     </div>
 
