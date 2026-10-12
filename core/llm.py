@@ -90,6 +90,28 @@ GROQ_MODELS = [
 ]
 
 
+def sanitize_llm_text(text: str) -> str:
+    """Replaces non-standard unicode spaces and dashes to avoid cp1252 Windows encoding issues."""
+    if not text:
+        return ""
+    replacements = {
+        '\u202f': ' ',  # narrow no-break space
+        '\u00a0': ' ',  # non-breaking space
+        '\u200b': '',   # zero-width space
+        '\u2011': '-',  # non-breaking hyphen
+        '\u2012': '-',
+        '\u2013': '-',  # en dash
+        '\u2014': '--', # em dash
+        '\u2018': "'",
+        '\u2019': "'",
+        '\u201c': '"',
+        '\u201d': '"',
+    }
+    for bad_char, good_char in replacements.items():
+        text = text.replace(bad_char, good_char)
+    return text
+
+
 class LLMManager:
     def __init__(self, provider: LLMProvider = LLMProvider.GROQ):
         self.provider = provider
@@ -128,18 +150,15 @@ class LLMManager:
                     raise ValueError("GEMINI_API_KEY / GOOGLE_API_KEY not found in env or st.secrets")
 
                 genai.configure(api_key=api_key)
-                try:
-                    self.llm = genai.GenerativeModel("gemini-1.5-flash")
-                except Exception:
-                    self.llm = genai.GenerativeModel("gemini-2.0-flash")
+                self.llm = genai.GenerativeModel("gemini-3.8-flash")
                 self._is_direct_genai = True
-                print("[LLM] Gemini (direct genai) loaded")
+                print("[LLM] Gemini (direct genai - gemini-3.8-flash) loaded")
             except Exception as e:
                 try:
                     from langchain_google_genai import ChatGoogleGenerativeAI
                     api_key = get_api_key("GEMINI_API_KEY")
                     self.llm = ChatGoogleGenerativeAI(
-                        model="gemini-1.5-flash",
+                        model="gemini-3.8-flash",
                         temperature=0.2,
                         max_output_tokens=2048,
                         google_api_key=api_key
@@ -162,7 +181,7 @@ class LLMManager:
                         max_tokens=2048,
                     )
                     if chat.choices and chat.choices[0].message and chat.choices[0].message.content:
-                        return chat.choices[0].message.content
+                        return sanitize_llm_text(chat.choices[0].message.content)
                 except Exception as e:
                     last_err = e
                     print(f"[LLM] Groq model '{model_candidate}' failed: {e}, trying next candidate...")
@@ -174,12 +193,21 @@ class LLMManager:
 
         try:
             if getattr(self, '_is_direct_genai', False):
+                for m_cand in ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-flash-latest"]:
+                    try:
+                        import google.generativeai as genai
+                        model = genai.GenerativeModel(m_cand)
+                        resp = model.generate_content(prompt)
+                        if resp and resp.text:
+                            return sanitize_llm_text(resp.text)
+                    except Exception:
+                        continue
                 resp = self.llm.generate_content(prompt)
-                return resp.text
+                return sanitize_llm_text(resp.text)
             response = self.llm.invoke(prompt)
             if hasattr(response, 'content'):
-                return response.content
-            return str(response)
+                return sanitize_llm_text(str(response.content))
+            return sanitize_llm_text(str(response))
         except Exception as e:
             raise RuntimeError(f"Gemini LLM error: {e}")
 
@@ -226,15 +254,12 @@ class LLMClient:
             except Exception as e:
                 print(f"[LLMClient] Primary provider ({self._provider}) error: {e}")
 
-                # If Groq failed, try Gemini as dynamic fallback
+                # If Groq failed, try Gemini as dynamic fallback without locking into Gemini forever
                 if self._provider == "groq":
                     try:
-                        print("[LLMClient] Attempting dynamic switch to Gemini...")
+                        print("[LLMClient] Attempting dynamic fallback to Gemini...")
                         alt_manager = LLMManager(provider=LLMProvider.GEMINI)
-                        res = alt_manager.generate(prompt)
-                        self._manager = alt_manager
-                        self._provider = "gemini"
-                        return res
+                        return alt_manager.generate(prompt)
                     except Exception as gem_err:
                         print(f"[LLMClient] Gemini fallback also failed: {gem_err}")
                 elif self._provider == "gemini":

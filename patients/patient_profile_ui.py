@@ -51,7 +51,8 @@ def render_patient_dashboard_tab(patient_id: int, db):
     emergency_phone = patient.get("emergency_contact_phone") or "Not provided"
     doctor_name = patient.get("doctor_name") or "Not assigned"
     doctor_phone = patient.get("doctor_phone") or "N/A"
-    lang_pref = patient.get("language_preference") or "English"
+    active_code = st.session_state.get("language", "en")
+    lang_pref = "English" if active_code == "en" else ("Hindi" if active_code == "hi" else (patient.get("language_preference") or "English"))
     reg_date = str(patient.get("created_at") or "")[:10]
 
     bmi_info = calculate_bmi(weight_kg if weight_kg > 0 else None, height_cm if height_cm > 0 else None)
@@ -178,6 +179,12 @@ def render_patient_dashboard_tab(patient_id: int, db):
             new_em_name = st.text_input("Emergency Contact Person", value=emergency_name if emergency_name != "Not provided" else "", key="edit_em_name")
             new_em_phone = st.text_input("Emergency Phone", value=emergency_phone if emergency_phone != "Not provided" else "", key="edit_em_phone")
 
+        up3_1, up3_2 = st.columns([1, 1])
+        with up3_1:
+            lang_choices = ["English", "Hindi", "Bengali", "Tamil", "Telugu", "Marathi"]
+            curr_choice_idx = lang_choices.index(lang_pref) if lang_pref in lang_choices else 0
+            new_lang = st.selectbox("Preferred Language (पसंदीदा भाषा)", lang_choices, index=curr_choice_idx, key="edit_lang_choice")
+
         col_save, _ = st.columns([1, 4])
         with col_save:
             if st.button("💾 Save Changes", key="save_profile_vitals_btn", use_container_width=True, type="primary"):
@@ -188,9 +195,13 @@ def render_patient_dashboard_tab(patient_id: int, db):
                     blood_type=new_blood,
                     phone_number=new_phone,
                     emergency_contact_name=new_em_name,
-                    emergency_contact_phone=new_em_phone
+                    emergency_contact_phone=new_em_phone,
+                    language_preference=new_lang
                 )
                 if success:
+                    st.session_state.language = "hi" if new_lang == "Hindi" else "en"
+                    if "floating_bot_history" in st.session_state:
+                        del st.session_state.floating_bot_history
                     st.success("✅ Profile records updated successfully!")
                     st.rerun()
                 else:

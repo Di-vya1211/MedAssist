@@ -127,8 +127,9 @@ def open_medassist_bot_dialog(patient_id: Optional[int] = None, patient_db = Non
         for i, (label, query_text) in enumerate(chips):
             with q_cols[i]:
                 if st.button(label, key=f"chip_dialog_{i}", use_container_width=True):
-                    _process_bot_query(query_text, patient_id, patient_db)
-                    st.rerun()
+                    with st.spinner("🤖 Loading answer..." if not is_hindi else "🤖 उत्तर तैयार कर रहे हैं..."):
+                        _process_bot_query(query_text, patient_id, patient_db)
+                    st.rerun(scope="fragment")
 
     # In-dialog Voice Input: Direct Live Mic
     live_btn_text = "🎙️ Live Mic (लाइव बोलें)" if is_hindi else "🎙️ Live Mic (Speak Now)"
@@ -139,8 +140,9 @@ def open_medassist_bot_dialog(patient_id: Optional[int] = None, patient_db = Non
             from voice.voice_service import voice_service
             ok, v_text, _ = voice_service.record_live_microphone(timeout=5, phrase_time_limit=8, hinted_lang=user_active_lang)
             if ok and v_text:
-                _process_bot_query(v_text, patient_id, patient_db)
-                st.rerun()
+                with st.spinner("🤖 Thinking..." if not is_hindi else "🤖 विचार कर रहे हैं..."):
+                    _process_bot_query(v_text, patient_id, patient_db)
+                st.rerun(scope="fragment")
             else:
                 st.warning("⚠️ No speech captured. Please speak closer to microphone and try again!")
 
@@ -159,8 +161,9 @@ def open_medassist_bot_dialog(patient_id: Optional[int] = None, patient_db = Non
             ask_submitted = st.form_submit_button("Ask ➤", type="primary", use_container_width=True)
 
     if ask_submitted and user_input and user_input.strip():
-        _process_bot_query(user_input.strip(), patient_id, patient_db)
-        st.rerun()
+        with st.spinner("🤖 MedAssist is thinking & verifying health guidelines..." if not is_hindi else "🤖 विचार कर रहे हैं..."):
+            _process_bot_query(user_input.strip(), patient_id, patient_db)
+        st.rerun(scope="fragment")
 
     # Reset Chat and Close Dialog Buttons
     col_clr, col_close = st.columns([1, 1])
@@ -168,17 +171,19 @@ def open_medassist_bot_dialog(patient_id: Optional[int] = None, patient_db = Non
         if st.button("🗑️ Reset Chat", key="clear_chat_dialog_btn", use_container_width=True):
             st.session_state.floating_bot_history = []
             init_floating_bot_state()
-            st.rerun()
+            st.rerun(scope="fragment")
     with col_close:
         if st.button("✕ Close / बंद करें", key="close_chat_dialog_btn", use_container_width=True):
             st.session_state.floating_bot_dialog_open = False
-            st.rerun()
+            st.rerun(scope="app")
 
 
 def _process_bot_query(query: str, patient_id: Optional[int], patient_db):
     """Processes the query with the conversational assistant and updates history."""
     if not query:
         return
+
+    st.session_state.floating_bot_dialog_open = True
 
     # Add user message to history
     st.session_state.floating_bot_history.append({

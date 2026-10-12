@@ -171,15 +171,21 @@ If NO, output ONLY:
         if patient_profile:
             patient_profile_str = f"Patient: {patient_profile.get('full_name', 'Patient')}, Age: {patient_profile.get('age', 'N/A')}, Gender: {patient_profile.get('gender', 'N/A')}, Blood Group: {patient_profile.get('blood_type', 'N/A')}."
 
-        system_prompt = f"""You are MedAssist, a compassionate rural health companion.
+        system_prompt = f"""You are MedAssist, an intelligent, empathetic AI clinical health companion (like a licensed medical AI assistant).
 {patient_profile_str}
 {lang_instruction}
 {allergy_context_prompt}
 
 Patient Query: "{clean_msg}"
 
-Provide a helpful, accurate, 3-5 sentence response. If there are red-flag emergency symptoms (severe chest pain, difficulty breathing, unconsciousness), urge calling 108/102 immediately.
-Always end with a gentle reminder to consult a qualified physician."""
+Clinical Response Instructions:
+- Answer the user's specific health inquiry directly, accurately, and thoroughly.
+- For symptom or lifestyle inquiries (such as hair fall, fatigue, skin health, nutrition, fitness): provide practical causes, dietary/nutritional tips (e.g. iron, protein, vitamins), and clear home-care self-management steps.
+- For medication/drug inquiries (such as Paracetamol, Dolo, Ibuprofen): explain the indications, standard safe adult dosage (e.g., 500mg-650mg every 4-6 hours, max 4000mg/day), pediatric considerations, contraindications, and liver/kidney cautions.
+- If the patient has recorded allergies, reinforce that their allergic drugs must be strictly avoided.
+- For emergency symptoms (severe chest pain, breathing difficulty, sudden weakness), strongly urge calling 108/102 immediately.
+- Structure your answer clearly in 3-5 comprehensive sentences.
+- Always include a reassuring note to consult a doctor for personalized prescription or persistent issues."""
 
         try:
             response_text = self.llm.generate(system_prompt).strip()
@@ -205,15 +211,25 @@ Always end with a gentle reminder to consult a qualified physician."""
         """Domain-grounded clinical fallback when LLM API is unavailable."""
         q_low = clean_msg.lower()
 
-        # 1. Drug lookup in FDA database (e.g. Paracetamol, Ibuprofen, Aspirin)
+        # 1. Hairfall / Hair loss
+        if any(w in q_low for w in ["hairfall", "hair fall", "hair loss", "hair", "baal", "balo", "balon"]):
+            if is_hindi:
+                return "बाल झड़ने (Hair fall) के मुख्य कारणों में तनाव, पोषण की कमी (प्रोटीन, आयरन, बायोटिन), हार्मोनल बदलाव या रूसी हो सकते हैं। आहार में हरी पत्तेदार सब्जियां, दालें, अंडे, मेवे शामिल करें और हल्के शैम्पू का उपयोग करें। यदि बाल बहुत तेजी से या गुच्छों में झड़ रहे हैं, तो थायरॉयड या खून की जांच के लिए डॉक्टर या डर्मेटोलॉजिस्ट से सलाह लें।"
+            else:
+                return "Hair fall is frequently caused by nutritional deficiencies (iron, zinc, biotin, protein), chronic stress, hormonal imbalances, or scalp issues. Ensure a nutrient-dense diet rich in eggs, lentils, nuts, and greens, and use a mild, sulfate-free shampoo. If hair shedding is severe or sudden, consult a doctor or dermatologist to test ferritin and thyroid levels."
+
+        # 2. Paracetamol / Acetaminophen / Painkillers
+        if any(w in q_low for w in ["paracetamol", "dolo", "crocin", "calpol", "tylenol", "acetaminophen"]):
+            if is_hindi:
+                return "पैरासिटामोल बुखार और हल्के से मध्यम दर्द के लिए एक सुरक्षित दवा है जब इसे सही मात्रा में लिया जाए। वयस्कों के लिए सामान्य खुराक 500mg से 650mg हर 4-6 घंटे में होती है, 24 घंटे में अधिकतम 4000mg से अधिक कभी न लें। लीवर की समस्या वाले या शराब का सेवन करने वाले लोगों को विशेष सावधानी बरतनी चाहिए। दवा लेने से पहले डॉक्टर या फार्मासिस्ट से परामर्श अवश्य लें।"
+            else:
+                return "Paracetamol (acetaminophen) is generally safe for fever and mild-to-moderate pain when used at recommended doses. For adults, the typical dose is 500mg to 650mg every 4 to 6 hours, with a strict maximum of 4000mg in 24 hours. Avoid combining multiple products containing paracetamol, and exercise caution with alcohol or liver disorders. Always consult a licensed physician or pharmacist for clinical advice."
+
+        # 3. Drug lookup in FDA database (Exact medicines only)
         try:
             from core.drug_qa_backend import DrugQABackend
             d_back = DrugQABackend()
             d_match = d_back.get_by_name(clean_msg)
-            if not d_match:
-                cand = d_back.search(clean_msg, top_k=1)
-                if cand:
-                    d_match = cand[0]
             if d_match:
                 d_name = d_match.get("name", "Medication").title()
                 d_ind = (d_match.get("indications") or "Symptom relief and management.")[:180]
@@ -226,56 +242,63 @@ Always end with a gentle reminder to consult a qualified physician."""
         except Exception:
             pass
 
-        # 2. Asthma / Respiratory
+        # 4. Allergies & Adverse reactions
+        if any(w in q_low for w in ["allergy", "allergic", "reaction", "rash", "khujli", "itching", "chakkte"]):
+            if is_hindi:
+                return "यदि आपको किसी दवा या खाद्य पदार्थ से एलर्जी (जैसे त्वचा पर लाल चकत्ते, खुजली, या सूजन) हो रही है, तो उस दवा का सेवन तुरंत रोकें और ओटीसी एंटीहिस्टामाइन (जैसे सिट्रीज़ीन) के लिए डॉक्टर से बात करें। यदि सांस लेने में कठिनाई या होंठ-गले में सूजन हो, तो तुरंत आपातकालीन चिकित्सा (108) लें।"
+            else:
+                return "If you are experiencing allergy symptoms such as rash, itching, or hives, discontinue the suspected trigger immediately. Mild allergies often respond to antihistamines (like cetirizine), but seek immediate emergency medical care (108/102) if you develop swelling in the throat, lips, or difficulty breathing."
+
+        # 5. Asthma / Respiratory
         if any(w in q_low for w in ["asthma", "saans", "breathing", "wheezing", "dama"]):
             if is_hindi:
                 return "अस्थमा (दमा) में वायुमार्ग में सूजन आ जाती है। धूल, धुएं, परागकण, और ठंडी हवा से बचें। चिकित्सक द्वारा निर्धारित इन्हेलर हमेशा अपने पास रखें। यदि सांस लेने में अत्यधिक तकलीफ या सीने में तेज दबाव हो, तो तुरंत आपातकालीन चिकित्सा सहायता (108) लें।"
             else:
                 return "Asthma causes chronic inflammation and airway narrowing. Key precautions include avoiding dust, smoke, cold air, and known allergens. Keep your prescribed rescue inhaler accessible at all times. Seek immediate emergency medical care if you experience severe breathlessness."
 
-        # 3. Diabetes / Blood Sugar
+        # 6. Diabetes / Blood Sugar
         if any(w in q_low for w in ["diabetes", "sugar", "madhumeh", "glucose"]):
             if is_hindi:
                 return "मधुमेह (डायबिटीज) में रक्त शर्करा का नियंत्रण आवश्यक है। कम मीठा और उच्च फाइबर युक्त आहार लें, प्रतिदिन 30 मिनट टहलें, और समय-समय पर फास्टिंग व खाने के बाद शुगर जांचें। डॉक्टर द्वारा दी गई दवाएं नियमित लें।"
             else:
                 return "Diabetes requires diligent blood sugar tracking and dietary moderation. Emphasize low-glycemic, fiber-rich foods, daily exercise, and regular fasting/post-meal glucose checks under physician supervision."
 
-        # 4. Blood Pressure / Hypertension
+        # 7. Blood Pressure / Hypertension
         if any(w in q_low for w in ["bp", "blood pressure", "hypertension", "uchh raktchap"]):
             if is_hindi:
                 return "उच्च रक्तचाप (High BP) में नमक का सेवन कम रखें, तली-भुनी चीजों से बचें, और नियमित व्यायाम करें। नियमित रूप से बीपी मापें और डॉक्टर द्वारा निर्धारित बीपी की गोलियां समय पर लें।"
             else:
                 return "Hypertension management involves limiting sodium intake to under 5g daily, regular aerobic activity, and avoiding excess stress. Monitor blood pressure frequently and adhere strictly to prescribed antihypertensive therapy."
 
-        # 5. Fever
+        # 8. Fever
         if any(w in q_low for w in ["fever", "bukhar", "temperature", "tapmaan"]):
             if is_hindi:
                 return "बुखार आमतौर पर किसी संक्रमण के खिलाफ शरीर की स्वाभाविक प्रतिक्रिया है। पर्याप्त पानी और तरल पदार्थ पिएं, आराम करें और तापमान मापते रहें। यदि बुखार 102°F से अधिक रहता है या 3 दिनों से ज्यादा रहता है, तो कृपया तुरंत डॉक्टर से संपर्क करें।"
             else:
                 return "Fever is typically your body's immune response to an infection. Stay well hydrated, rest adequately, and monitor your temperature. If fever exceeds 102°F (38.9°C) or lasts more than 3 days, please consult a physician promptly."
 
-        # 6. Headache
+        # 9. Headache
         if any(w in q_low for w in ["headache", "sirdard", "sir dard", "migraine"]):
             if is_hindi:
                 return "सिरदर्द अक्सर थकान, तनाव, निर्जलीकरण या नींद की कमी के कारण होता है। शांत कमरे में आराम करें, पानी पिएं और स्क्रीन से ब्रेक लें। यदि सिरदर्द अचानक और बहुत तीव्र हो, तो तुरंत चिकित्सक से परामर्श लें।"
             else:
                 return "Headaches are often caused by stress, dehydration, lack of sleep, or eye strain. Drink plenty of water and rest in a quiet, dimly lit room. Seek immediate medical attention if the headache is sudden and unusually severe."
 
-        # 7. Cough / Cold
+        # 10. Cough / Cold
         if any(w in q_low for w in ["cough", "khansi", "cold", "sardi", "jukham"]):
             if is_hindi:
                 return "हल्की सर्दी-खांसी में गर्म पानी का सेवन, भाप लेना और गर्म तरल पदार्थ गले को आराम देते हैं। यदि सांस लेने में कठिनाई हो या खांसी 2 सप्ताह से अधिक रहे, तो डॉक्टर को दिखाएं।"
             else:
                 return "For mild colds and coughs, warm fluids and steam inhalation can help soothe airways. If you experience difficulty breathing, high fever, or the cough persists beyond two weeks, please see a doctor."
 
-        # 8. Stomach / Digestion / Acidity
+        # 11. Stomach / Digestion / Acidity
         if any(w in q_low for w in ["stomach", "pet", "dard", "gas", "acidity", "vomiting", "ulti", "nausea"]):
             if is_hindi:
                 return "पेट दर्द, गैस या उल्टी में सुपाच्य और हल्का भोजन (जैसे दलिया, खिचड़ी) लें और ओआरएस पिएं ताकि कमजोरी न आए। यदि दर्द बहुत तीव्र हो या बार-बार उल्टी हो, तो तुरंत डॉक्टर को दिखाएं।"
             else:
                 return "For stomach pain, indigestion, or nausea, sip oral rehydration fluids and eat small, bland meals. Seek clinical evaluation if abdominal pain is acute or accompanied by persistent vomiting."
 
-        # 9. General safe advice
+        # 12. General safe advice
         if is_hindi:
             return "आपके स्वास्थ्य की देखभाल के लिए पर्याप्त विश्राम, भरपूर पानी और संतुलित आहार आवश्यक है। यदि आपके लक्षण बने रहते हैं या बढ़ रहे हैं, तो कृपया व्यक्तिगत जांच के लिए डॉक्टर से अवश्य सलाह लें।"
         else:

@@ -231,14 +231,33 @@ class DrugQABackend:
         return [x[1] for x in scored[:top_n]]
 
     def get_by_name(self, name: str) -> Optional[Dict]:
-        if not name:
+        if not name or not name.strip():
             return None
         name_lower = name.lower().strip()
         canonical = DRUG_SYNONYMS.get(name_lower, name_lower)
-        # Search exact/substring match for both name and canonical alias
+
+        # 1. Exact match on full drug name or canonical synonym
         for target in [name_lower, canonical]:
             for drug in self.drugs:
-                d_name = self._get_name(drug)
-                if d_name and (target in d_name.lower() or d_name.lower() in target):
+                d_name = self._get_name(drug).lower().strip()
+                if d_name and target == d_name:
                     return drug
+
+        # 2. Strict whole-word token match for recognized medicine names (>= 4 letters, not common words)
+        stop_words = {
+            "air", "day", "one", "aid", "care", "skin", "eye", "pain", "cold",
+            "body", "relief", "plus", "free", "good", "easy", "well", "safe",
+            "hair", "fall", "what", "with", "from", "take", "help", "need",
+            "tell", "dose", "best", "give", "much", "time", "feel", "look", "should"
+        }
+        tokens = set(re.findall(r'[a-zA-Z0-9]+', name_lower))
+        for token in tokens:
+            if token in stop_words or len(token) < 4:
+                continue
+            canonical_token = DRUG_SYNONYMS.get(token, token)
+            for drug in self.drugs:
+                d_name = self._get_name(drug).lower().strip()
+                if d_name and (d_name == token or d_name == canonical_token):
+                    return drug
+
         return None

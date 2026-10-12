@@ -226,7 +226,7 @@ def show_registration_page(db: PatientDatabase):
         
         with col2:
             weight = st.number_input("Weight (kg)", min_value=10.0, max_value=300.0, value=70.0, step=0.5)
-            language = st.selectbox("Preferred Language", ["Hindi", "English", "Bengali", "Tamil", "Telugu", "Marathi"])
+            language = st.selectbox("Preferred Language", ["English", "Hindi", "Bengali", "Tamil", "Telugu", "Marathi"], index=0)
         
         # Known Drug Allergies (Permanent Record)
         st.markdown("### Known Drug Allergies (पूर्व दवा एलर्जी)")

@@ -948,6 +948,14 @@ def main():
         )
         if selected_lang[1] != st.session_state.language:
             st.session_state.language = selected_lang[1]
+            new_pref_name = "Hindi" if selected_lang[1] == "hi" else "English"
+            if patient_id and db:
+                try:
+                    db.update_patient(patient_id, language_preference=new_pref_name)
+                    if "patient_profile" in st.session_state and isinstance(st.session_state.patient_profile, dict):
+                        st.session_state.patient_profile["language_preference"] = new_pref_name
+                except Exception:
+                    pass
             if "floating_bot_history" in st.session_state:
                 del st.session_state.floating_bot_history
             st.rerun()
